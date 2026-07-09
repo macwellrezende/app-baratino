@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baratino FC</title>
+    <!-- Tailwind CSS para design moderno -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Supabase CDN para conectar ao banco -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-900 text-white font-sans min-h-screen flex flex-col max-w-md mx-auto shadow-2xl border-x border-gray-800">
+
+    <!-- HEADER -->
+    <header class="bg-gray-800 p-4 text-center border-b border-gray-700 sticky top-0 z-50 flex justify-between items-center">
+        <h1 class="text-xl font-bold tracking-wider text-yellow-500">BARATINO FC</h1>
+        <button id="btn-logout" class="hidden text-xs bg-red-600 hover:bg-red-700 px-2 py-1 rounded">Sair</button>
+    </header>
+
+    <!-- TELA DE LOGIN -->
+    <main id="tela-login" class="flex-1 flex flex-col justify-center p-6 space-y-6">
+        <div class="text-center space-y-2">
+            <h2 class="text-2xl font-semibold">Resenha Organizada</h2>
+            <p class="text-gray-400 text-sm">Entre com seu e-mail cadastrado para acessar.</p>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">E-mail</label>
+                <input type="email" id="login-email" placeholder="seuemail@exemplo.com" class="w-full bg-gray-800 border border-gray-700 rounded p-3 text-white focus:outline-none focus:border-yellow-500">
+            </div>
+            <button id="btn-entrar" class="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold p-3 rounded transition duration-200">Entrar no App</button>
+        </div>
+    </main>
+
+    <!-- TELA PRINCIPAL (CONTEÚDO DO APP) -->
+    <main id="tela-principal" class="hidden flex-1 p-4 space-y-6 overflow-y-auto mb-16">
+        
+        <!-- ABA: JOGADORES / GOLS -->
+        <section id="aba-jogadores" class="space-y-4">
+            <h2 class="text-lg font-bold border-b border-gray-700 pb-2">Artilharia & Elenco</h2>
+            <div class="bg-gray-800 rounded-lg p-4 text-center text-gray-400 text-sm">Carregando lista de atletas...</div>
+        </section>
+
+        <!-- ABA: FINANCEIRO RESTRETO -->
+        <section id="aba-financeiro" class="hidden space-y-4">
+            <h2 class="text-lg font-bold border-b border-gray-700 pb-2 text-red-400">Meu Financeiro</h2>
+            <div class="bg-gray-800 rounded-lg p-4">
+                <p class="text-xs text-gray-400">Saldo Devedor Atual</p>
+                <p class="text-2xl font-black text-red-500 mt-1">R$ 0,00</p>
+            </div>
+        </section>
+
+        <!-- ABA: PRESENÇA JOGO -->
+        <section id="aba-presenca" class="hidden space-y-4">
+            <h2 class="text-lg font-bold border-b border-gray-700 pb-2 text-green-400">Presença no Próximo Jogo</h2>
+            <div class="flex gap-2">
+                <button class="flex-1 bg-green-600 font-bold py-3 rounded">Confirmar</button>
+                <button class="flex-1 bg-gray-700 font-bold py-3 rounded">Não Vou</button>
+            </div>
+        </section>
+
+        <!-- ABA: VOTAÇÃO -->
+        <section id="aba-votacao" class="hidden space-y-4">
+            <h2 class="text-lg font-bold border-b border-gray-700 pb-2 text-yellow-400">Votação da Semana</h2>
+            <p class="text-sm text-gray-400">Escolha os melhores e piores de forma secreta.</p>
+        </section>
+    </main>
+
+    <!-- MENU INFERIOR (NAVEGAÇÃO POR ABAS) -->
+    <nav id="menu-inferior" class="hidden bg-gray-800 border-t border-gray-700 fixed bottom-0 left-0 right-0 max-w-md mx-auto flex justify-around p-2 text-center text-xs text-gray-400 z-50">
+        <button onclick="mudarAba('jogadores')" class="flex-1 py-1 text-yellow-500 font-semibold">⚽<br>Artilharia</button>
+        <button onclick="mudarAba('financeiro')" class="flex-1 py-1">💰<br>Finanças</button>
+        <button onclick="mudarAba('presenca')" class="flex-1 py-1">📋<br>Presença</button>
+        <button onclick="mudarAba('votacao')" class="flex-1 py-1">🔥<br>Votação</button>
+    </nav>
+
+    <!-- CONFIGURAÇÕES E LÓGICA DO SUPABASE -->
+    <script>
+        // Suas chaves que coletamos no Supabase
+        const SUPABASE_URL = "https://menkdxhnzshtdkxsjeoe.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_499H1fxIAJ9bmcwksN9jZg_gRuPzwhQ";
+        
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Lógica de simulação de login inicial rápida
+        document.getElementById('btn-entrar').addEventListener('click', () => {
+            const email = document.getElementById('login-email').value;
+            if(email) {
+                document.getElementById('tela-login').classList.add('hidden');
+                document.getElementById('tela-principal').classList.remove('hidden');
+                document.getElementById('menu-inferior').classList.remove('hidden');
+                document.getElementById('btn-logout').classList.remove('hidden');
+            } else {
+                alert('Por favor, digite um e-mail válido.');
+            }
+        });
+
+        document.getElementById('btn-logout').addEventListener('click', () => {
+            location.reload();
+        });
+
+        function mudarAba(aba) {
+            const abas = ['jogadores', 'financeiro', 'presenca', 'votacao'];
+            abas.forEach(a => document.getElementById(`aba-${a}`).classList.add('hidden'));
+            document.getElementById(`aba-${aba}`).classList.remove('hidden');
+            
+            // Estilizar botão ativo
+            const botoes = document.querySelectorAll('#menu-inferior button');
+            botoes.forEach(b => b.classList.remove('text-yellow-500', 'font-semibold'));
+            event.currentTarget.classList.add('text-yellow-500', 'font-semibold');
+        }
+    </script>
+</body>
+</html>
