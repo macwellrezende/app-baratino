@@ -9,7 +9,6 @@
     <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* Customizações refinadas para o Azul Marinho Oficial */
         .bg-marinho-deep { background-color: #07111E; }
         .bg-marinho-card { background-color: #0E1E33; }
         .border-marinho-light { border-color: #1A314D; }
@@ -21,42 +20,36 @@
     <!-- HEADER DO APLICATIVO -->
     <header class="bg-marinho-card p-4 text-center border-b border-marinho-light sticky top-0 z-50 flex justify-between items-center">
         <div class="flex items-center space-x-2">
-            <!-- Mini escudo representativo -->
             <div class="w-7 h-7 rounded-full border-2 border-white flex items-center justify-center font-bold text-xs">B</div>
             <h1 class="text-lg font-black tracking-widest text-white">BARATINO FC</h1>
         </div>
         <button id="btn-logout" class="hidden text-xs bg-red-600/80 hover:bg-red-600 px-3 py-1.5 rounded font-medium transition">Sair</button>
     </header>
 
-    <!-- TELA DE LOGIN PREMIUM -->
+    <!-- TELA DE LOGIN -->
     <main id="tela-login" class="flex-1 flex flex-col justify-center p-8 space-y-8">
-        
-        <!-- Área do Escudo Centralizado -->
         <div class="text-center space-y-4">
             <div class="mx-auto w-32 h-32 bg-white/5 rounded-full border border-white/20 flex items-center justify-center p-4 shadow-inner relative">
-                <!-- Ícone interno simulando o brasão real enquanto não há upload público -->
                 <svg class="w-20 h-20 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 8v4m0 4h.01"/>
                 </svg>
                 <div class="absolute bottom-2 text-[9px] font-bold tracking-wider text-white/60">DESDE 2018</div>
             </div>
-            
             <div class="space-y-1">
                 <h2 class="text-2xl font-bold tracking-tight">Área do Atleta</h2>
                 <p class="text-marinho-light text-sm">Digite seu e-mail para acessar o painel do clube.</p>
             </div>
         </div>
 
-        <!-- Formulário de Entrada -->
-        <form id="form-login" onsubmit="loginAtleta(event)" class="space-y-4">
+        <!-- Formulário corrigido sem chamadas inline -->
+        <form id="form-login" class="space-y-4">
             <div>
                 <label class="block text-xs font-bold uppercase tracking-wider text-white/70 mb-1.5">E-mail Cadastrado</label>
                 <input type="email" id="login-email" required placeholder="seuemail@baba.com" 
                     class="w-full bg-marinho-card border border-marinho-light rounded-lg p-3.5 text-white placeholder-gray-500 focus:outline-none focus:border-white transition">
             </div>
             
-            <!-- Mensagem de feedback interna para evitar travamentos silenciosos -->
             <div id="login-feedback" class="hidden text-sm p-3 rounded-lg text-center font-medium"></div>
 
             <button type="submit" id="btn-entrar" 
@@ -66,10 +59,8 @@
         </form>
     </main>
 
-    <!-- TELA PRINCIPAL DO APP (CONTEÚDO PÓS-LOGIN) -->
+    <!-- TELA PRINCIPAL DO APP -->
     <main id="tela-principal" class="hidden flex-1 p-5 space-y-6 overflow-y-auto mb-16">
-        
-        <!-- ABA: ARTILHARIA & ELENCO -->
         <section id="aba-jogadores" class="space-y-4">
             <h2 class="text-xl font-bold border-b border-marinho-light pb-2">⚽ Artilharia & Elenco</h2>
             <div id="lista-jogadores" class="bg-marinho-card border border-marinho-light rounded-xl p-6 text-center text-marinho-light text-sm">
@@ -77,62 +68,54 @@
             </div>
         </section>
 
-        <!-- ABA: FINANCEIRO -->
         <section id="aba-financeiro" class="hidden space-y-4">
             <h2 class="text-xl font-bold border-b border-marinho-light pb-2">💰 Meu Financeiro</h2>
             <div class="bg-marinho-card border border-marinho-light rounded-xl p-5">
                 <p class="text-xs text-marinho-light font-medium uppercase tracking-wider">Situação Atual</p>
                 <p class="text-3xl font-black text-white mt-1">R$ 0,00</p>
-                <div class="mt-4 pt-4 border-t border-marinho-light/50 flex justify-between text-xs text-marinho-light">
-                    <span>Mensalidade em dia</span>
-                    <span class="text-green-400 font-bold">● Regular</span>
-                </div>
             </div>
         </section>
 
-        <!-- ABA: PRESENÇA -->
         <section id="aba-presenca" class="hidden space-y-4">
             <h2 class="text-xl font-bold border-b border-marinho-light pb-2">📋 Confirmar Presença</h2>
-            <p class="text-sm text-marinho-light">Próximo jogo agendado. Confirme seu status:</p>
             <div class="flex gap-3">
                 <button class="flex-1 bg-white hover:bg-gray-100 text-gray-900 font-bold py-3.5 rounded-lg transition">Vou Pro Jogo</button>
-                <button class="flex-1 bg-marinho-card border border-marinho-light hover:bg-marinho-light/20 font-bold py-3.5 rounded-lg transition">Desfalque</button>
+                <button class="flex-1 bg-marinho-card border border-marinho-light font-bold py-3.5 rounded-lg transition">Desfalque</button>
             </div>
         </section>
 
-        <!-- ABA: VOTAÇÃO -->
         <section id="aba-votacao" class="hidden space-y-4">
             <h2 class="text-xl font-bold border-b border-marinho-light pb-2">🔥 Votação do Baba</h2>
-            <div class="bg-marinho-card border border-marinho-light rounded-xl p-5 text-center space-y-2">
-                <p class="text-sm text-marinho-light">A votação secreta para o "Melhor e Pior da Rodada" estará disponível após o término do jogo.</p>
+            <div class="bg-marinho-card border border-marinho-light rounded-xl p-5 text-center">
+                <p class="text-sm text-marinho-light">A votação secreta estará disponível após o jogo.</p>
             </div>
         </section>
     </main>
 
-    <!-- NAVEGAÇÃO INFERIOR POR ABAS (WHITE STYLE ON BLUE) -->
+    <!-- NAVEGAÇÃO INFERIOR -->
     <nav id="menu-inferior" class="hidden bg-marinho-card border-t border-marinho-light fixed bottom-0 left-0 right-0 max-w-md mx-auto flex justify-around p-2 text-center text-[11px] text-marinho-light z-50">
-        <button onclick="mudarAba('jogadores')" class="flex-1 py-1.5 text-white font-bold">⚽<br>Artilharia</button>
-        <button onclick="mudarAba('financeiro')" class="flex-1 py-1.5 transition hover:text-white">💰<br>Finanças</button>
-        <button onclick="mudarAba('presenca')" class="flex-1 py-1.5 transition hover:text-white">📋<br>Presença</button>
-        <button onclick="mudarAba('votacao')" class="flex-1 py-1.5 transition hover:text-white">🔥<br>Votação</button>
+        <button id="btn-aba-jogadores" class="flex-1 py-1.5 text-white font-bold">⚽<br>Artilharia</button>
+        <button id="btn-aba-financeiro" class="flex-1 py-1.5 transition hover:text-white">💰<br>Finanças</button>
+        <button id="btn-aba-presenca" class="flex-1 py-1.5 transition hover:text-white">📋<br>Presença</button>
+        <button id="btn-aba-votacao" class="flex-1 py-1.5 transition hover:text-white">🔥<br>Votação</button>
     </nav>
 
-    <!-- SCRIPT DE INTEGRAÇÃO DO BANCO -->
     <script>
         const SUPABASE_URL = "https://menkdxhnzshtdkxsjeoe.supabase.co";
+        // Chave limpa e direta capturada do seu painel
         const SUPABASE_ANON_KEY = "sb_publishable_499H1fxIAJ9bmcwksN9jZg_gRuPzwhQ";
+        
         const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
         let jogadorLogado = null;
 
-        async function loginAtleta(event) {
+        // Escuta o evento de envio de forma nativa e isolada para evitar travar o clique
+        document.getElementById('form-login').addEventListener('submit', async function(event) {
             event.preventDefault();
             
             const emailInput = document.getElementById('login-email').value.trim().toLowerCase();
             const btnEntrar = document.getElementById('btn-entrar');
             const feedback = document.getElementById('login-feedback');
             
-            // Configura estado de carregamento visual
             feedback.classList.remove('hidden', 'bg-red-900/40', 'text-red-200', 'bg-green-900/40', 'text-green-200');
             feedback.classList.add('bg-white/10', 'text-white');
             feedback.innerText = "Verificando elenco...";
@@ -140,7 +123,6 @@
             btnEntrar.classList.add('opacity-50');
 
             try {
-                // Consulta direta à tabela de jogadores do Supabase
                 const { data, error } = await supabase
                     .from('jogadores')
                     .select('*')
@@ -151,51 +133,51 @@
 
                 if (data) {
                     jogadorLogado = data;
-                    
                     feedback.classList.remove('bg-white/10', 'text-white');
                     feedback.classList.add('bg-green-900/40', 'text-green-200');
-                    feedback.innerText = `Acesso autorizado! Bem-vindo, ${data.nome}.`;
+                    feedback.innerText = `Autorizado! Bem-vindo, ${data.nome}.`;
                     
-                    // Transição suave de telas
                     setTimeout(() => {
                         document.getElementById('tela-login').classList.add('hidden');
                         document.getElementById('tela-principal').classList.remove('hidden');
                         document.getElementById('menu-inferior').classList.remove('hidden');
                         document.getElementById('btn-logout').classList.remove('hidden');
                         feedback.classList.add('hidden');
-                    }, 1000);
-
+                    }, 800);
                 } else {
                     feedback.classList.remove('bg-white/10', 'text-white');
                     feedback.classList.add('bg-red-900/40', 'text-red-200');
-                    feedback.innerText = "E-mail não encontrado no elenco do Baratino FC.";
-                    
+                    feedback.innerText = "E-mail não encontrado no elenco.";
                     btnEntrar.disabled = false;
                     btnEntrar.classList.remove('opacity-50');
                 }
             } catch (err) {
-                console.error("Erro Supabase:", err);
+                console.error("Erro fatal capturado:", err);
                 feedback.classList.remove('bg-white/10', 'text-white');
                 feedback.classList.add('bg-red-900/40', 'text-red-200');
-                feedback.innerText = "Erro de conexão. Verifique as permissões de RLS no banco.";
-                
+                feedback.innerText = "Erro técnico de conexão. Detalhes no console.";
                 btnEntrar.disabled = false;
                 btnEntrar.classList.remove('opacity-50');
             }
-        }
+        });
 
-        function mudarAba(aba) {
-            const abas = ['jogadores', 'financeiro', 'presenca', 'votacao'];
-            abas.forEach(a => document.getElementById(`aba-${a}`).classList.add('hidden'));
-            document.getElementById(`aba-${aba}`).classList.remove('hidden');
-            
-            const botoes = document.querySelectorAll('#menu-inferior button');
-            botoes.forEach(b => b.classList.remove('text-white', 'font-bold'));
-            botoes.forEach(b => b.classList.add('text-marinho-light'));
-            
-            event.currentTarget.classList.remove('text-marinho-light');
-            event.currentTarget.classList.add('text-white', 'font-bold');
-        }
+        // Funções de navegação também tratadas via escuta nativa
+        ['jogadores', 'financeiro', 'presenca', 'votacao'].forEach(aba => {
+            document.getElementById(`btn-aba-${aba}`).addEventListener('click', function(e) {
+                const abas = ['jogadores', 'financeiro', 'presenca', 'votacao'];
+                abas.forEach(a => document.getElementById(`aba-${a}`).classList.add('hidden'));
+                document.getElementById(`aba-${aba}`).classList.remove('hidden');
+                
+                const botoes = document.querySelectorAll('#menu-inferior button');
+                botoes.forEach(b => {
+                    b.classList.remove('text-white', 'font-bold');
+                    b.classList.add('text-marinho-light');
+                });
+                
+                e.currentTarget.classList.remove('text-marinho-light');
+                e.currentTarget.classList.add('text-white', 'font-bold');
+            });
+        });
 
         document.getElementById('btn-logout').addEventListener('click', () => {
             location.reload();
