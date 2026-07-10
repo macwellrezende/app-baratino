@@ -9,6 +9,7 @@
     <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        /* Customizações para o Azul Marinho Oficial */
         .bg-marinho-deep { background-color: #07111E; }
         .bg-marinho-card { background-color: #0E1E33; }
         .border-marinho-light { border-color: #1A314D; }
@@ -17,7 +18,7 @@
 </head>
 <body class="bg-marinho-deep text-white font-sans min-h-screen flex flex-col max-w-md mx-auto shadow-2xl border-x border-marinho-light">
 
-    <!-- HEADER -->
+    <!-- HEADER DO APLICATIVO -->
     <header class="bg-marinho-card p-4 text-center border-b border-marinho-light sticky top-0 z-50 flex justify-between items-center">
         <div class="flex items-center space-x-2">
             <div class="w-7 h-7 rounded-full border-2 border-white flex items-center justify-center font-bold text-xs">B</div>
@@ -26,9 +27,10 @@
         <button id="btn-logout" class="hidden text-xs bg-red-600/80 hover:bg-red-600 px-3 py-1.5 rounded font-medium transition">Sair</button>
     </header>
 
-    <!-- TELA LOGIN -->
+    <!-- TELA DE LOGIN -->
     <main id="tela-login" class="flex-1 flex flex-col justify-center p-8 space-y-8">
         <div class="text-center space-y-4">
+            <!-- ESCUDO OFICIAL -->
             <div class="mx-auto w-36 h-36 bg-white rounded-full border-4 border-marinho-light flex items-center justify-center p-3 shadow-2xl overflow-hidden">
                 <img src="escudo.png" onerror="this.src='Fundo Branco - Brasão BFC.png'" alt="Escudo Baratino FC" class="w-full h-full object-contain">
             </div>
@@ -37,43 +39,84 @@
                 <p class="text-marinho-light text-sm">Digite seu e-mail para acessar o painel do clube.</p>
             </div>
         </div>
+
         <form id="form-login" class="space-y-4">
-            <input type="email" id="login-email" required placeholder="seuemail@baba.com" class="w-full bg-marinho-card border border-marinho-light rounded-lg p-3.5 text-white placeholder-gray-500 focus:outline-none focus:border-white transition">
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-white/70 mb-1.5">E-mail Cadastrado</label>
+                <input type="email" id="login-email" required placeholder="seuemail@baba.com" 
+                    class="w-full bg-marinho-card border border-marinho-light rounded-lg p-3.5 text-white placeholder-gray-500 focus:outline-none focus:border-white transition">
+            </div>
             <div id="login-feedback" class="hidden text-sm p-3 rounded-lg text-center font-medium"></div>
-            <button type="submit" id="btn-entrar" class="w-full bg-white hover:bg-gray-100 text-gray-900 font-bold p-3.5 rounded-lg transition duration-200 shadow-md cursor-pointer">Entrar no Aplicativo</button>
+            <button type="submit" id="btn-entrar" 
+                class="w-full bg-white hover:bg-gray-100 text-gray-900 font-bold p-3.5 rounded-lg transition duration-200 shadow-md cursor-pointer">
+                Entrar no Aplicativo
+            </button>
         </form>
     </main>
 
-    <!-- TELA PRINCIPAL -->
+    <!-- TELA PRINCIPAL DO APP -->
     <main id="tela-principal" class="hidden flex-1 p-5 space-y-6 overflow-y-auto mb-16">
         
+        <!-- ABA: ARTILHARIA E ELENCO -->
         <section id="aba-jogadores" class="space-y-4">
             <h2 class="text-xl font-bold border-b border-marinho-light pb-2">⚽ Artilharia & Elenco</h2>
-            <div id="lista-jogadores" class="space-y-2"></div>
+            <div class="bg-marinho-card/40 border border-marinho-light/40 rounded-xl p-3 flex justify-around text-xs font-bold text-marinho-light tracking-wide">
+                <span class="flex items-center gap-1.5 text-yellow-400">⚽ Gols</span>
+                <span class="flex items-center gap-1.5 text-green-400">👍 Bola Cheia</span>
+                <span class="flex items-center gap-1.5 text-red-400">👎 Bola Murcha</span>
+            </div>
+            <div id="lista-jogadores" class="space-y-2">
+                <div class="bg-marinho-card border border-marinho-light rounded-xl p-6 text-center text-marinho-light text-sm">
+                    Carregando dados dos atletas...
+                </div>
+            </div>
         </section>
 
+        <!-- ABA: FINANCEIRO INDIVIDUAL -->
         <section id="aba-financeiro" class="hidden space-y-4">
             <h2 class="text-xl font-bold border-b border-marinho-light pb-2">💰 Meu Financeiro</h2>
-            <div id="painel-financeiro" class="space-y-3"></div>
+            <div id="painel-financeiro" class="space-y-3">
+                <div class="bg-marinho-card border border-marinho-light rounded-xl p-6 text-center text-marinho-light text-sm">
+                    Carregando dados financeiros...
+                </div>
+            </div>
         </section>
 
+        <!-- ABA: PRESENÇA -->
         <section id="aba-presenca" class="hidden space-y-4">
             <h2 class="text-xl font-bold border-b border-marinho-light pb-2">📋 Confirmar Presença</h2>
-            <button id="btn-admin-reset" class="hidden w-full bg-red-600/20 text-red-400 border border-red-500/30 font-bold p-3 rounded-lg text-xs uppercase tracking-wider cursor-pointer mb-2">🧹 Limpar Lista da Semana</button>
+            
+            <!-- Botão de Reset Exclusivo do Admin -->
+            <button id="btn-admin-reset" class="hidden w-full bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 font-bold p-3 rounded-lg text-xs transition uppercase tracking-wider cursor-pointer mb-2">
+                🧹 Limpar Lista da Semana (Admin)
+            </button>
+            
+            <p id="alerta-lista-fechada" class="hidden text-center text-xs bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 p-2.5 rounded-lg font-medium mb-3"></p>
+
+            <!-- Botões de Ação -->
             <div id="acoes-presenca" class="flex gap-3">
                 <button id="btn-vou" class="flex-1 bg-marinho-card border border-marinho-light text-white font-bold py-3.5 rounded-lg transition cursor-pointer">Vou Pro Jogo</button>
                 <button id="btn-naovou" class="flex-1 bg-marinho-card border border-marinho-light text-white font-bold py-3.5 rounded-lg transition cursor-pointer">Desfalque</button>
             </div>
+
+            <!-- Painel para Adicionar Convidado -->
             <div id="bloco-convidado" class="bg-marinho-card border border-marinho-light rounded-xl p-3.5 space-y-2 hidden">
-                <p class="text-xs font-bold text-white/80 uppercase tracking-wider">➕ Levar Convidado</p>
+                <p class="text-xs font-bold text-white/80 uppercase tracking-wider">➕ Levar Convidado (Linha)</p>
                 <div class="flex gap-2">
-                    <input type="text" id="input-convidado" placeholder="Nome" class="flex-1 bg-marinho-deep border border-marinho-light rounded-lg p-2 text-sm text-white">
-                    <button id="btn-add-convidado" class="bg-white text-gray-950 px-4 py-2 rounded-lg text-xs font-black cursor-pointer">Incluir</button>
+                    <input type="text" id="input-convidado" placeholder="Nome do convidado" class="flex-1 bg-marinho-deep border border-marinho-light rounded-lg p-2 text-sm text-white focus:outline-none focus:border-white">
+                    <button id="btn-add-convidado" class="bg-white text-gray-950 px-4 py-2 rounded-lg text-xs font-black cursor-pointer hover:bg-gray-100">Incluir</button>
                 </div>
             </div>
-            <div id="painel-lista-presenca" class="space-y-4 pt-2"></div>
+
+            <!-- Listagem Dinâmica -->
+            <div id="painel-lista-presenca" class="space-y-4 pt-2">
+                <div class="bg-marinho-card border border-marinho-light rounded-xl p-6 text-center text-marinho-light text-sm">
+                    Carregando lista de presença...
+                </div>
+            </div>
         </section>
 
+        <!-- ABA: VOTAÇÃO -->
         <section id="aba-votacao" class="hidden space-y-4">
             <h2 class="text-xl font-bold border-b border-marinho-light pb-2">🔥 Votação do Baba</h2>
             <div class="bg-marinho-card border border-marinho-light rounded-xl p-5 text-center">
@@ -82,6 +125,7 @@
         </section>
     </main>
 
+    <!-- NAVEGAÇÃO INFERIOR -->
     <nav id="menu-inferior" class="hidden bg-marinho-card border-t border-marinho-light fixed bottom-0 left-0 right-0 max-w-md mx-auto flex justify-around p-2 text-center text-[11px] text-marinho-light z-50">
         <button id="btn-aba-jogadores" class="flex-1 py-1.5 text-white font-bold">⚽<br>Artilharia</button>
         <button id="btn-aba-financeiro" class="flex-1 py-1.5 transition hover:text-white">💰<br>Finanças</button>
@@ -92,49 +136,209 @@
     <script>
         const SUPABASE_URL = "https://menkdxhnzshtdkxsjeoe.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_499H1fxIAJ9bmcwksN9jZg_gRuPzwhQ";
+        
         const ADMIN_EMAIL = "macwellrezende@hotmail.com";
+
         const dbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let SampleLogado = null;
 
+        // Liberado para testes operacionais
         function verificarJanelaLista() {
-            const dataBrasilia = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Bahia"}));
-            const diaSemana = dataBrasilia.getDay(); 
-            const hora = dataBrasilia.getHours();
-            let aberta = false;
-            if (diaSemana === 3 && hora >= 5) aberta = true; 
-            if (diaSemana === 4) aberta = true; 
-            if (diaSemana === 5 && hora < 22) aberta = true; 
-            return aberta;
+            return true;
+        }
+
+        async function carregarJogadores() {
+            const listaDiv = document.getElementById('lista-jogadores');
+            try {
+                const { data, error } = await dbClient
+                    .from('jogadores')
+                    .select('*')
+                    .order('gols', { ascending: false })
+                    .order('nome', { ascending: true });
+
+                if (error) throw error;
+
+                if (data && data.length > 0) {
+                    listaDiv.innerHTML = "";
+                    data.forEach(jog => {
+                        const categoriaFormatada = jog.categoria === 'Mensalista' ? 'Associado' : jog.categoria;
+                        const card = document.createElement('div');
+                        card.className = "bg-marinho-card border border-marinho-light rounded-xl p-4 flex flex-col space-y-3 shadow-md";
+                        card.innerHTML = `
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="font-bold text-white text-base tracking-wide">${jog.nome}</p>
+                                    <p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider mt-0.5">${categoriaFormatada}</p>
+                                </div>
+                                <div class="bg-yellow-500/10 border border-yellow-500/30 px-3 py-1.5 rounded-lg flex items-center space-x-2 min-w-[75px] justify-center">
+                                    <span class="text-base">⚽</span>
+                                    <div class="text-center">
+                                        <p class="text-[14px] font-black text-yellow-400 leading-tight">${jog.gols || 0}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex gap-2 text-xs font-semibold pt-2 border-t border-marinho-light/40">
+                                <span class="bg-green-500/5 text-green-400 border border-green-500/15 px-2.5 py-1 rounded flex items-center gap-1.5">👍 ${jog.bola_cheia_acumulado || 0}</span>
+                                <span class="bg-red-500/5 text-red-400 border border-red-500/15 px-2.5 py-1 rounded flex items-center gap-1.5">👎 ${jog.bola_murcha_acumulado || 0}</span>
+                            </div>
+                        `;
+                        listaDiv.appendChild(card);
+                    });
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function renderizarFinanceiro(jog) {
+            const container = document.getElementById('painel-financeiro');
+            const mesesAno = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+            const dataAtual = new Date();
+            const mesAtualNome = mesesAno[dataAtual.getMonth()];
+            const anoAtual = dataAtual.getFullYear();
+            
+            let valorMensal = 45.00;
+            if (dataAtual.getMonth() === 6 || dataAtual.getMonth() === 7) valorMensal = 55.00;
+            if (jog.valor_mensalidade !== null && jog.valor_mensalidade !== undefined && jog.valor_mensalidade > 0) valorMensal = Number(jog.valor_mensalidade);
+
+            const statusMensalidade = jog.mensalidade_paga 
+                ? `<span class="bg-green-500/10 text-green-400 border border-green-500/20 px-3 py-1 rounded-full text-xs font-bold">🟢 PAGO</span>`
+                : `<span class="bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full text-xs font-bold">🔴 PENDENTE (R$ ${valorMensal.toFixed(2)})</span>`;
+
+            const vCartoes = jog.cartoes_pendentes || 0;
+            const statusCartoes = vCartoes > 0
+                ? `<span class="bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full text-xs font-bold">🔴 PENDENTE (R$ ${vCartoes.toFixed(2)})</span>`
+                : `<span class="bg-white/5 text-gray-400 border border-white/10 px-3 py-1 rounded-full text-xs font-medium">🟢 Sem Débitos</span>`;
+
+            const vMultas = jog.multas_pendentes || 0;
+            const statusMultas = vMultas > 0
+                ? `<span class="bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full text-xs font-bold">🔴 PENDENTE (R$ ${vMultas.toFixed(2)})</span>`
+                : `<span class="bg-white/5 text-gray-400 border border-white/10 px-3 py-1 rounded-full text-xs font-medium">🟢 Sem Débitos</span>`;
+
+            container.innerHTML = `
+                <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 flex justify-between items-center shadow-sm">
+                    <div><p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider">Mensalidade</p><p class="text-base font-bold text-white mt-0.5">${mesAtualNome} / ${anoAtual}</p></div>
+                    <div>${statusMensalidade}</div>
+                </div>
+                <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 flex justify-between items-center shadow-sm">
+                    <div><p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider">Pendência de Cartões</p><p class="text-base font-bold text-white mt-0.5">Acumulado das Rodadas</p></div>
+                    <div>${statusCartoes}</div>
+                </div>
+                <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 flex justify-between items-center shadow-sm">
+                    <div><p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider">Multas Administrativas</p><p class="text-base font-bold text-white mt-0.5">Nome na lista e ausência no jogo</p></div>
+                    <div>${statusMultas}</div>
+                </div>
+            `;
         }
 
         async function carregarListaPresenca() {
             const container = document.getElementById('painel-lista-presenca');
+            const btnVou = document.getElementById('btn-vou');
+            const btnNaoVou = document.getElementById('btn-naovou');
             const blocoConvidado = document.getElementById('bloco-convidado');
-            
-            try {
-                const { data: jogadores } = await dbClient.from('jogadores').select('*').order('nome', { ascending: true });
-                const { data: convidados } = await dbClient.from('convidados').select('nome, jogador_id, jogadores(nome)');
+            const alertaFechada = document.getElementById('alerta-lista-fechada');
+            const btnResetAdmin = document.getElementById('btn-admin-reset');
 
-                const associados = jogadores.filter(j => j.presenca === 'Confirmado' && j.categoria !== 'Goleiro');
-                const goleiros = jogadores.filter(j => j.presenca === 'Confirmado' && j.categoria === 'Goleiro');
+            const listaAberta = verificarJanelaLista();
+
+            if (SampleLogado && SampleLogado.email === ADMIN_EMAIL) {
+                btnResetAdmin.classList.remove('hidden');
+            } else {
+                btnResetAdmin.classList.add('hidden');
+            }
+
+            alertaFechada.classList.add('hidden');
+            btnVou.disabled = false; btnNaoVou.disabled = false;
+            btnVou.classList.remove('opacity-30'); btnNaoVou.classList.remove('opacity-30');
+
+            try {
+                const { data: jogadores, error: errJ } = await dbClient
+                    .from('jogadores')
+                    .select('id, nome, presenca, categoria')
+                    .order('nome', { ascending: true });
+
+                const { data: convidados, error: errC } = await dbClient
+                    .from('convidados')
+                    .select('nome, jogador_id, jogadores(nome)');
+
+                if (errJ || errC) throw errJ || errC;
+
+                const associadosConfirmados = jogadores.filter(j => j.presenca === 'Confirmado' && j.categoria !== 'Goleiro');
+                const goleirosConfirmados = jogadores.filter(j => j.presenca === 'Confirmado' && j.categoria === 'Goleiro');
                 const desfalques = jogadores.filter(j => j.presenca === 'Dispensado');
                 const semResposta = jogadores.filter(j => j.presenca !== 'Confirmado' && j.presenca !== 'Dispensado');
 
-                if (SampleLogado && SampleLogado.presenca === 'Confirmado') blocoConvidado.classList.remove('hidden');
-                else blocoConvidado.classList.add('hidden');
+                if (SampleLogado) {
+                    const atual = jogadores.find(j => j.id === SampleLogado.id);
+                    if (atual) {
+                        SampleLogado.presenca = mt = atual.presenca;
+                        btnVou.className = "flex-1 font-bold py-3.5 rounded-lg transition border cursor-pointer text-center";
+                        btnNaoVou.className = "flex-1 font-bold py-3.5 rounded-lg transition border cursor-pointer text-center";
+
+                        if (SampleLogado.presenca === 'Confirmado') {
+                            btnVou.classList.add('bg-green-600', 'text-white', 'border-green-500');
+                            btnNaoVou.classList.add('bg-marinho-card', 'text-gray-400', 'border-marinho-light');
+                            blocoConvidado.classList.remove('hidden'); 
+                        } else if (SampleLogado.presenca === 'Dispensado') {
+                            btnVou.classList.add('bg-marinho-card', 'text-gray-400', 'border-marinho-light');
+                            btnNaoVou.classList.add('bg-red-600', 'text-white', 'border-red-500');
+                            blocoConvidado.classList.add('hidden');
+                        } else {
+                            btnVou.classList.add('bg-marinho-card', 'text-white', 'border-marinho-light');
+                            btnNaoVou.classList.add('bg-marinho-card', 'text-white', 'border-marinho-light');
+                            blocoConvidado.classList.add('hidden');
+                        }
+                    }
+                }
+
+                const listaConvidadosHTML = convidados ? convidados.map(c => `${c.nome} <span class="text-[11px] text-marinho-light font-normal">(Convidado de ${c.jogadores?.nome || 'Anônimo'})</span>`).join(', ') : '';
+                const totalLinha = associadosConfirmados.length + (convidados ? convidados.length : 0);
 
                 container.innerHTML = `
-                    <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 space-y-2">
-                        <p class="text-xs font-bold text-green-400">✅ Confirmados (${associados.length + (convidados?.length || 0)})</p>
-                        <p class="text-sm">${associados.map(j => j.nome).join(', ')}</p>
-                        ${convidados?.length > 0 ? `<p class="text-xs text-yellow-400 pt-2">Convidados: ${convidados.map(c => c.nome + ' (' + c.jogadores.nome + ')').join(', ')}</p>` : ''}
+                    <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 space-y-3">
+                        <div class="flex justify-between items-center border-b border-marinho-light pb-2">
+                            <p class="text-xs font-bold uppercase tracking-wider text-green-400">🏃 Jogadores de Linha Confirmados</p>
+                            <span class="bg-green-500/10 text-green-400 text-xs px-2 py-0.5 rounded-full font-black">${totalLinha}</span>
+                        </div>
+                        <p class="text-sm text-white font-semibold leading-relaxed">
+                            ${associadosConfirmados.map(j => j.nome).join(', ') || '<span class="text-xs text-marinho-light italic">Nenhum associado confirmado.</span>'}
+                        </p>
+                        ${convidados && convidados.length > 0 ? `
+                        <div class="pt-2 border-t border-marinho-light/30">
+                            <p class="text-xs font-bold text-yellow-400 uppercase tracking-tight mb-1">Convidados:</p>
+                            <p class="text-sm text-gray-200 font-medium leading-relaxed">${listaConvidadosHTML}</p>
+                        </div>` : ''}
                     </div>
+
                     <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 space-y-2">
-                        <p class="text-xs font-bold text-cyan-400">🧤 Goleiros (${goleiros.length})</p>
-                        <p class="text-sm">${goleiros.map(j => j.nome).join(', ') || 'Nenhum'}</p>
+                        <div class="flex justify-between items-center border-b border-marinho-light pb-1.5 mb-2">
+                            <p class="text-xs font-bold uppercase tracking-wider text-cyan-400">🧤 Goleiros Confirmados</p>
+                            <span class="bg-cyan-500/10 text-cyan-400 text-xs px-2 py-0.5 rounded-full font-black">${goleirosConfirmados.length}</span>
+                        </div>
+                        <p class="text-sm text-cyan-100 font-bold leading-relaxed">
+                            ${goleirosConfirmados.map(j => j.nome).join(', ') || '<span class="text-xs text-marinho-light italic">Nenhum goleiro confirmado.</span>'}
+                        </p>
+                    </div>
+
+                    <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 space-y-2">
+                        <div class="flex justify-between items-center border-b border-marinho-light pb-1.5 mb-2">
+                            <p class="text-xs font-bold uppercase tracking-wider text-red-400">❌ Desfalques</p>
+                            <span class="bg-red-500/10 text-red-400 text-xs px-2 py-0.5 rounded-full font-black">${desfalques.length}</span>
+                        </div>
+                        <p class="text-sm text-marinho-light/80 leading-relaxed">
+                            ${desfalques.map(j => j.nome).join(', ') || '<span class="text-xs text-marinho-light italic">Nenhum desfalque.</span>'}
+                        </p>
+                    </div>
+
+                    <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 space-y-2">
+                        <div class="flex justify-between items-center border-b border-marinho-light pb-1.5 mb-2">
+                            <p class="text-xs font-bold uppercase tracking-wider text-gray-400">⏳ No Baratino (Sem Resposta)</p>
+                            <span class="bg-white/5 text-gray-400 text-xs px-2 py-0.5 rounded-full font-black">${semResposta.length}</span>
+                        </div>
+                        <p class="text-xs text-marinho-light/60 leading-relaxed">
+                            ${semResposta.map(j => j.nome).join(', ') || '<span class="text-xs text-green-400/60 italic">Elenco completo respondeu!</span>'}
+                        </p>
                     </div>
                 `;
-            } catch (err) { console.error("Erro na lista:", err); }
+            } catch (err) { console.error(err); }
         }
 
         async function registrarPresenca(status) {
@@ -142,14 +346,122 @@
             try {
                 await dbClient.from('jogadores').update({ presenca: status }).eq('id', SampleLogado.id);
                 if (status === 'Dispensado') await dbClient.from('convidados').delete().eq('jogador_id', SampleLogado.id);
-                carregarListaPresenca();
-            } catch (err) { console.error("Erro ao registrar:", err); }
+                await carregarListaPresenca();
+            } catch (err) { console.error(err); }
         }
+
+        document.getElementById('btn-admin-reset').addEventListener('click', async () => {
+            if (!confirm("⚠️ Tem certeza que deseja limpar as presenças e convidados para iniciar a nova semana?")) return;
+            try {
+                await dbClient.from('jogadores').update({ presenca: 'Sem Resposta' }).neq('presenca', 'Inexistente');
+                await dbClient.from('convidados').delete().neq('id', 0);
+                alert("✅ Lista limpa com sucesso!");
+                await carregarListaPresenca();
+            } catch (err) { console.error(err); }
+        });
+
+        document.getElementById('btn-add-convidado').addEventListener('click', async () => {
+            const input = document.getElementById('input-convidado');
+            const nome = input.value.trim();
+            if (!nome || !SampleLogado) return;
+            try {
+                await dbClient.from('convidados').insert({ nome: nome, jogador_id: SampleLogado.id });
+                input.value = "";
+                await carregarListaPresenca();
+            } catch (err) { console.error(err); }
+        });
 
         document.getElementById('btn-vou').addEventListener('click', () => registrarPresenca('Confirmado'));
         document.getElementById('btn-naovou').addEventListener('click', () => registrarPresenca('Dispensado'));
-        
-        // ... (resto das funções de navegação e login permanecem iguais)
+
+        // FORMULÁRIO DE LOGIN RESTAURADO
+        document.getElementById('form-login').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const emailInput = document.getElementById('login-email').value.trim().toLowerCase();
+            const btnEntrar = document.getElementById('btn-entrar');
+            const feedback = document.getElementById('login-feedback');
+            
+            feedback.classList.remove('hidden', 'bg-red-900/40', 'text-red-200', 'bg-green-900/40', 'text-green-200');
+            feedback.classList.add('bg-white/10', 'text-white');
+            feedback.innerText = "Verificando elenco...";
+            btnEntrar.disabled = true;
+            btnEntrar.classList.add('opacity-50');
+
+            try {
+                const { data, error } = await dbClient
+                    .from('jogadores')
+                    .select('*')
+                    .eq('email', emailInput)
+                    .maybeSingle();
+
+                if (error) throw error;
+
+                if (data) {
+                    SampleLogado = data;
+                    feedback.classList.remove('bg-white/10', 'text-white');
+                    feedback.classList.add('bg-green-900/40', 'text-green-200');
+                    feedback.innerText = `Autorizado! Bem-vindo, ${data.nome}.`;
+                    
+                    await carregarJogadores();
+                    renderizarFinanceiro(data);
+                    await carregarListaPresenca();
+                    
+                    setTimeout(() => {
+                        document.getElementById('tela-login').classList.add('hidden');
+                        document.getElementById('tela-principal').classList.remove('hidden');
+                        document.getElementById('menu-inferior').classList.remove('hidden');
+                        document.getElementById('btn-logout').classList.remove('hidden');
+                        feedback.classList.add('hidden');
+                    }, 800);
+                } else {
+                    feedback.classList.remove('bg-white/10', 'text-white');
+                    feedback.classList.add('bg-red-900/40', 'text-red-200');
+                    feedback.innerText = "E-mail não encontrado no elenco.";
+                    btnEntrar.disabled = false;
+                    btnEntrar.classList.remove('opacity-50');
+                }
+            } catch (err) {
+                console.error("Erro fatal capturado:", err);
+                btnEntrar.disabled = false;
+                btnEntrar.classList.remove('opacity-50');
+            }
+        });
+
+        // NAVEGAÇÃO DAS ABAS RESTAURADA
+        ['jogadores', 'financeiro', 'presenca', 'votacao'].forEach(aba => {
+            document.getElementById(`btn-aba-${aba}`).addEventListener('click', async function(e) {
+                const abas = ['jogadores', 'financeiro', 'presenca', 'votacao'];
+                abas.forEach(a => document.getElementById(`aba-${a}`).classList.add('hidden'));
+                document.getElementById(`aba-${aba}`).classList.remove('hidden');
+                
+                if (SampleLogado) {
+                    try {
+                        const { data } = await dbClient.from('jogadores').select('*').eq('id', SampleLogado.id).single();
+                        if (data) {
+                            SampleLogado = data;
+                            if (aba === 'financeiro') renderizarFinanceiro(data);
+                            if (aba === 'presenca') await carregarListaPresenca();
+                        }
+                    } catch (err) { console.error(err); }
+                }
+
+                if (aba === 'jogadores') {
+                    carregarJogadores();
+                }
+                
+                const botoes = document.querySelectorAll('#menu-inferior button');
+                botoes.forEach(b => {
+                    b.classList.remove('text-white', 'font-bold');
+                    b.classList.add('text-marinho-light');
+                });
+                e.currentTarget.classList.remove('text-marinho-light');
+                e.currentTarget.classList.add('text-white', 'font-bold');
+            });
+        });
+
+        document.getElementById('btn-logout').addEventListener('click', () => {
+            location.reload();
+        });
     </script>
 </body>
 </html>
