@@ -142,11 +142,21 @@
         const dbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let SampleLogado = null;
 
-        // Liberado para testes operacionais
+        // VALIDAÇÃO DE HORÁRIO COM FUSO HORÁRIO DE BRASÍLIA
         function verificarJanelaLista() {
-            return true;
+            const dataBrasilia = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Bahia"}));
+            const diaSemana = dataBrasilia.getDay(); 
+            const hora = dataBrasilia.getHours();
+
+            let aberta = false;
+            if (diaSemana === 3 && hora >= 5) aberta = true; // Abre Quarta às 05h
+            if (diaSemana === 4) aberta = true; // Quinta inteira
+            if (diaSemana === 5 && hora < 22) aberta = true; // Fecha Sexta às 22h
+
+            return aberta;
         }
 
+        // FUNÇÃO PARA CARREGAR ELENCO E ARTILHARIA
         async function carregarJogadores() {
             const listaDiv = document.getElementById('lista-jogadores');
             try {
@@ -188,6 +198,7 @@
             } catch (err) { console.error(err); }
         }
 
+        // FUNÇÃO DE RENDERIZAÇÃO FINANCEIRA INDIVIDUAL
         function renderizarFinanceiro(jog) {
             const container = document.getElementById('painel-financeiro');
             const mesesAno = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -229,6 +240,7 @@
             `;
         }
 
+        // FUNÇÃO DE LISTA DE PRESENÇA COMPLETA
         async function carregarListaPresenca() {
             const container = document.getElementById('painel-lista-presenca');
             const btnVou = document.getElementById('btn-vou');
@@ -245,9 +257,17 @@
                 btnResetAdmin.classList.add('hidden');
             }
 
-            alertaFechada.classList.add('hidden');
-            btnVou.disabled = false; btnNaoVou.disabled = false;
-            btnVou.classList.remove('opacity-30'); btnNaoVou.classList.remove('opacity-30');
+            if (!listaAberta) {
+                alertaFechada.classList.remove('hidden');
+                alertaFechada.innerText = "🔒 A lista abre quarta às 5h e encerra sexta às 22h.";
+                btnVou.disabled = true; btnNaoVou.disabled = true;
+                btnVou.classList.add('opacity-30'); btnNaoVou.classList.add('opacity-30');
+                blocoConvidado.classList.add('hidden');
+            } else {
+                alertaFechada.classList.add('hidden');
+                btnVou.disabled = false; btnNaoVou.disabled = false;
+                btnVou.classList.remove('opacity-30'); btnNaoVou.classList.remove('opacity-30');
+            }
 
             try {
                 const { data: jogadores, error: errJ } = await dbClient
@@ -264,19 +284,19 @@
                 const associadosConfirmados = jogadores.filter(j => j.presenca === 'Confirmado' && j.categoria !== 'Goleiro');
                 const goleirosConfirmados = jogadores.filter(j => j.presenca === 'Confirmado' && j.categoria === 'Goleiro');
                 const desfalques = jogadores.filter(j => j.presenca === 'Dispensado');
-                const semResposta = jogadores.filter(j => j.presenca !== 'Confirmado' && j.presenca !== 'Dispensado');
+                const semResposta = jogadores.filter(j => j.presenca === 'Sem Resposta' || !j.presenca);
 
                 if (SampleLogado) {
                     const atual = jogadores.find(j => j.id === SampleLogado.id);
                     if (atual) {
-                        SampleLogado.presenca = mt = atual.presenca;
+                        SampleLogado.presenca = atual.presenca;
                         btnVou.className = "flex-1 font-bold py-3.5 rounded-lg transition border cursor-pointer text-center";
                         btnNaoVou.className = "flex-1 font-bold py-3.5 rounded-lg transition border cursor-pointer text-center";
 
                         if (SampleLogado.presenca === 'Confirmado') {
                             btnVou.classList.add('bg-green-600', 'text-white', 'border-green-500');
                             btnNaoVou.classList.add('bg-marinho-card', 'text-gray-400', 'border-marinho-light');
-                            blocoConvidado.classList.remove('hidden'); 
+                            if (listaAberta) blocoConvidado.classList.remove('hidden'); 
                         } else if (SampleLogado.presenca === 'Dispensado') {
                             btnVou.classList.add('bg-marinho-card', 'text-gray-400', 'border-marinho-light');
                             btnNaoVou.classList.add('bg-red-600', 'text-white', 'border-red-500');
@@ -350,6 +370,11 @@
             } catch (err) { console.error(err); }
         }
 
+        // EVENTOS DE CLIQUE DE PRESENÇA
+        document.getElementById('btn-vou').addEventListener('click', () => registrarPresenca('Confirmado'));
+        document.getElementById('btn-naovou').addEventListener('click', () => registrarPresenca('Dispensado'));
+
+        // RESET MANUAL DO ADMIN
         document.getElementById('btn-admin-reset').addEventListener('click', async () => {
             if (!confirm("⚠️ Tem certeza que deseja limpar as presenças e convidados para iniciar a nova semana?")) return;
             try {
@@ -360,21 +385,19 @@
             } catch (err) { console.error(err); }
         });
 
+        // ADICIONAR CONVIDADO
         document.getElementById('btn-add-convidado').addEventListener('click', async () => {
             const input = document.getElementById('input-convidado');
             const nome = input.value.trim();
             if (!nome || !SampleLogado) return;
             try {
-                await dbClient.from('convidados').insert({ nome: nome, jogador_id: SampleLogado.id });
+                await dbClient.from('convidados').insert({ nome: nome, ...{jogador_id: SampleLogado.id} });
                 input.value = "";
                 await carregarListaPresenca();
             } catch (err) { console.error(err); }
         });
 
-        document.getElementById('btn-vou').addEventListener('click', () => registrarPresenca('Confirmado'));
-        document.getElementById('btn-naovou').addEventListener('click', () => registrarPresenca('Dispensado'));
-
-        // FORMULÁRIO DE LOGIN RESTAURADO
+        // FORMULÁRIO DE LOGIN COMPLETO
         document.getElementById('form-login').addEventListener('submit', async function(event) {
             event.preventDefault();
             const emailInput = document.getElementById('login-email').value.trim().toLowerCase();
@@ -427,7 +450,7 @@
             }
         });
 
-        // NAVEGAÇÃO DAS ABAS RESTAURADA
+        // NAVEGAÇÃO DE ABAS
         ['jogadores', 'financeiro', 'presenca', 'votacao'].forEach(aba => {
             document.getElementById(`btn-aba-${aba}`).addEventListener('click', async function(e) {
                 const abas = ['jogadores', 'financeiro', 'presenca', 'votacao'];
