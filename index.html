@@ -30,12 +30,10 @@
     <!-- TELA DE LOGIN -->
     <main id="tela-login" class="flex-1 flex flex-col justify-center p-8 space-y-8">
         <div class="text-center space-y-4">
-            
             <!-- ESCUDO OFICIAL -->
             <div class="mx-auto w-36 h-36 bg-white rounded-full border-4 border-marinho-light flex items-center justify-center p-3 shadow-2xl overflow-hidden">
                 <img src="escudo.png" onerror="this.src='Fundo Branco - Brasão BFC.png'" alt="Escudo Baratino FC" class="w-full h-full object-contain">
             </div>
-
             <div class="space-y-1">
                 <h2 class="text-2xl font-bold tracking-tight">Área do Atleta</h2>
                 <p class="text-marinho-light text-sm">Digite seu e-mail para acessar o painel do clube.</p>
@@ -48,9 +46,7 @@
                 <input type="email" id="login-email" required placeholder="seuemail@baba.com" 
                     class="w-full bg-marinho-card border border-marinho-light rounded-lg p-3.5 text-white placeholder-gray-500 focus:outline-none focus:border-white transition">
             </div>
-            
             <div id="login-feedback" class="hidden text-sm p-3 rounded-lg text-center font-medium"></div>
-
             <button type="submit" id="btn-entrar" 
                 class="w-full bg-white hover:bg-gray-100 text-gray-900 font-bold p-3.5 rounded-lg transition duration-200 shadow-md cursor-pointer">
                 Entrar no Aplicativo
@@ -60,16 +56,15 @@
 
     <!-- TELA PRINCIPAL DO APP -->
     <main id="tela-principal" class="hidden flex-1 p-5 space-y-6 overflow-y-auto mb-16">
+        
+        <!-- ABA: ARTILHARIA E ELENCO -->
         <section id="aba-jogadores" class="space-y-4">
             <h2 class="text-xl font-bold border-b border-marinho-light pb-2">⚽ Artilharia & Elenco</h2>
-            
-            <!-- LEGENDA ULTRA COMPACTA SOLICITADA -->
             <div class="bg-marinho-card/40 border border-marinho-light/40 rounded-xl p-3 flex justify-around text-xs font-bold text-marinho-light tracking-wide">
                 <span class="flex items-center gap-1.5 text-yellow-400">⚽ Gols</span>
                 <span class="flex items-center gap-1.5 text-green-400">👍 Bola Cheia</span>
                 <span class="flex items-center gap-1.5 text-red-400">👎 Bola Murcha</span>
             </div>
-
             <div id="lista-jogadores" class="space-y-2">
                 <div class="bg-marinho-card border border-marinho-light rounded-xl p-6 text-center text-marinho-light text-sm">
                     Carregando dados dos atletas...
@@ -77,14 +72,17 @@
             </div>
         </section>
 
+        <!-- ABA: FINANCEIRO INDIVIDUAL -->
         <section id="aba-financeiro" class="hidden space-y-4">
             <h2 class="text-xl font-bold border-b border-marinho-light pb-2">💰 Meu Financeiro</h2>
-            <div class="bg-marinho-card border border-marinho-light rounded-xl p-5">
-                <p class="text-xs text-marinho-light font-medium uppercase tracking-wider">Situação Atual</p>
-                <p class="text-3xl font-black text-white mt-1">R$ 0,00</p>
+            <div id="painel-financeiro" class="space-y-3">
+                <div class="bg-marinho-card border border-marinho-light rounded-xl p-6 text-center text-marinho-light text-sm">
+                    Carregando dados financeiros...
+                </div>
             </div>
         </section>
 
+        <!-- ABA: PRESENÇA -->
         <section id="aba-presenca" class="hidden space-y-4">
             <h2 class="text-xl font-bold border-b border-marinho-light pb-2">📋 Confirmar Presença</h2>
             <div class="flex gap-3">
@@ -93,6 +91,7 @@
             </div>
         </section>
 
+        <!-- ABA: VOTAÇÃO -->
         <section id="aba-votacao" class="hidden space-y-4">
             <h2 class="text-xl font-bold border-b border-marinho-light pb-2">🔥 Votação do Baba</h2>
             <div class="bg-marinho-card border border-marinho-light rounded-xl p-5 text-center">
@@ -116,7 +115,7 @@
         const dbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let jogadorLogado = null;
 
-        // FUNÇÃO DE BUSCA E MONTAGEM DA LISTA
+        // FUNÇÃO PARA BUSCAR E EXIBIR O ELENCO ATUALIZADO
         async function carregarJogadores() {
             const listaDiv = document.getElementById('lista-jogadores');
             try {
@@ -146,31 +145,90 @@
                                     </div>
                                 </div>
                             </div>
-                            
                             <div class="flex gap-2 text-xs font-semibold pt-2 border-t border-marinho-light/40">
-                                <span class="bg-green-500/5 text-green-400 border border-green-500/15 px-2.5 py-1 rounded flex items-center gap-1.5">
-                                    👍 ${jog.bola_cheia_acumulado || 0}
-                                </span>
-                                <span class="bg-red-500/5 text-red-400 border border-red-500/15 px-2.5 py-1 rounded flex items-center gap-1.5">
-                                    👎 ${jog.bola_murcha_acumulado || 0}
-                                </span>
+                                <span class="bg-green-500/5 text-green-400 border border-green-500/15 px-2.5 py-1 rounded flex items-center gap-1.5">👍 ${jog.bola_cheia_acumulado || 0}</span>
+                                <span class="bg-red-500/5 text-red-400 border border-red-500/15 px-2.5 py-1 rounded flex items-center gap-1.5">👎 ${jog.bola_murcha_acumulado || 0}</span>
                             </div>
                         `;
                         listaDiv.appendChild(card);
                     });
-                } else {
-                    listaDiv.innerHTML = `<div class="bg-marinho-card border border-marinho-light rounded-xl p-6 text-center text-marinho-light text-sm">Nenhum jogador cadastrado ainda.</div>`;
                 }
             } catch (err) {
                 console.error("Erro ao carregar elenco:", err);
-                listaDiv.innerHTML = `<div class="bg-red-900/20 border border-red-900/40 text-red-300 rounded-xl p-4 text-center text-sm">Erro ao carregar a lista de atletas.</div>`;
             }
+        }
+
+        // FUNÇÃO DE RENDERIZAÇÃO FINANCEIRA INTELIGENTE COM REGRA DE SAZONALIDADE
+        function renderizarFinanceiro(jog) {
+            const container = document.getElementById('painel-financeiro');
+            
+            // Define nomes dos meses em português
+            const mesesAno = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+            const dataAtual = new Date();
+            const mesAtualNome = mesesAno[dataAtual.getMonth()];
+            const anoAtual = dataAtual.getFullYear();
+            
+            // REGRA OPERACIONAL: Julho (mês 6) e Agosto (mês 7) custam 55.00. Outros meses 45.00.
+            let valorMensal = 45.00;
+            if (dataAtual.getMonth() === 6 || dataAtual.getMonth() === 7) {
+                valorMensal = 55.00;
+            }
+            
+            // Se houver um valor de exceção preenchido manualmente no Supabase, usa ele
+            if (jog.valor_mensalidade !== null && jog.valor_mensalidade !== undefined && jog.valor_mensalidade > 0) {
+                valorMensal = Number(jog.valor_mensalidade);
+            }
+
+            const mensPaga = jog.mensalidade_paga;
+            const statusMensalidade = mensPaga 
+                ? `<span class="bg-green-500/10 text-green-400 border border-green-500/20 px-3 py-1 rounded-full text-xs font-bold">🟢 PAGO</span>`
+                : `<span class="bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full text-xs font-bold">🔴 PENDENTE (R$ ${valorMensal.toFixed(2)})</span>`;
+
+            // Tratativa de Cartões
+            const vCartoes = jog.cartoes_pendentes || 0;
+            const statusCartoes = vCartoes > 0
+                ? `<span class="bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full text-xs font-bold">🔴 PENDENTE (R$ ${vCartoes.toFixed(2)})</span>`
+                : `<span class="bg-white/5 text-gray-400 border border-white/10 px-3 py-1 rounded-full text-xs font-medium">R$ 0,00</span>`;
+
+            // Tratativa de Multas
+            const vMultas = jog.multas_pendentes || 0;
+            const statusMultas = vMultas > 0
+                ? `<span class="bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full text-xs font-bold">🔴 PENDENTE (R$ ${vMultas.toFixed(2)})</span>`
+                : `<span class="bg-white/5 text-gray-400 border border-white/10 px-3 py-1 rounded-full text-xs font-medium">R$ 0,00</span>`;
+
+            container.innerHTML = `
+                <!-- Bloco Mensalidade Dinâmica -->
+                <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 flex justify-between items-center shadow-sm">
+                    <div>
+                        <p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider">Mensalidade Atual</p>
+                        <p class="text-base font-bold text-white mt-0.5">${mesAtualNome} / ${anoAtual}</p>
+                    </div>
+                    <div>${statusMensalidade}</div>
+                </div>
+
+                <!-- Bloco Cartões -->
+                <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 flex justify-between items-center shadow-sm">
+                    <div>
+                        <p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider">Pendência de Cartões</p>
+                        <p class="text-base font-bold text-white mt-0.5">Acumulado das Rodadas</p>
+                    </div>
+                    <div>${statusCartoes}</div>
+                </div>
+
+                <!-- Bloco Multas -->
+                <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 flex justify-between items-center shadow-sm">
+                    <div>
+                        <p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider">Multas Administrativas</p>
+                        <p class="text-base font-bold text-white mt-0.5">Infrações ou Faltas</p>
+                    </div>
+                    <div>${statusMultas}</div>
+                </div>
+            `;
         }
 
         // FORMULÁRIO DE LOGIN
         document.getElementById('form-login').addEventListener('submit', async function(event) {
             event.preventDefault();
-            
             const emailInput = document.getElementById('login-email').value.trim().toLowerCase();
             const btnEntrar = document.getElementById('btn-entrar');
             const feedback = document.getElementById('login-feedback');
@@ -197,6 +255,7 @@
                     feedback.innerText = `Autorizado! Bem-vindo, ${data.nome}.`;
                     
                     await carregarJogadores();
+                    renderizarFinanceiro(data);
                     
                     setTimeout(() => {
                         document.getElementById('tela-login').classList.add('hidden');
@@ -214,9 +273,6 @@
                 }
             } catch (err) {
                 console.error("Erro fatal capturado:", err);
-                feedback.classList.remove('bg-white/10', 'text-white');
-                feedback.classList.add('bg-red-900/40', 'text-red-200');
-                feedback.innerText = "Erro técnico de conexão. Detalhes no console.";
                 btnEntrar.disabled = false;
                 btnEntrar.classList.remove('opacity-50');
             }
@@ -224,11 +280,21 @@
 
         // CONTROLE DE NAVEGAÇÃO DAS ABAS
         ['jogadores', 'financeiro', 'presenca', 'votacao'].forEach(aba => {
-            document.getElementById(`btn-aba-${aba}`).addEventListener('click', function(e) {
+            document.getElementById(`btn-aba-${aba}`).addEventListener('click', async function(e) {
                 const abas = ['jogadores', 'financeiro', 'presenca', 'votacao'];
                 abas.forEach(a => document.getElementById(`aba-${a}`).classList.add('hidden'));
                 document.getElementById(`aba-${aba}`).classList.remove('hidden');
                 
+                if (jogadorLogado) {
+                    try {
+                        const { data } = await dbClient.from('jogadores').select('*').eq('id', jogadorLogado.id).single();
+                        if (data) {
+                            jogadorLogado = data;
+                            if (aba === 'financeiro') renderizarFinanceiro(data);
+                        }
+                    } catch (err) { console.error(err); }
+                }
+
                 if (aba === 'jogadores') {
                     carregarJogadores();
                 }
@@ -238,13 +304,11 @@
                     b.classList.remove('text-white', 'font-bold');
                     b.classList.add('text-marinho-light');
                 });
-                
                 e.currentTarget.classList.remove('text-marinho-light');
                 e.currentTarget.classList.add('text-white', 'font-bold');
             });
         });
 
-        // LOGOUT
         document.getElementById('btn-logout').addEventListener('click', () => {
             location.reload();
         });
