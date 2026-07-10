@@ -83,11 +83,36 @@
         </section>
 
         <!-- ABA: PRESENÇA -->
-        <section id="aba-presenca" class="hidden space-y-4">
+        <section id="aba-presenca" class="space-y-4">
             <h2 class="text-xl font-bold border-b border-marinho-light pb-2">📋 Confirmar Presença</h2>
-            <div class="flex gap-3">
-                <button class="flex-1 bg-white hover:bg-gray-100 text-gray-900 font-bold py-3.5 rounded-lg transition">Vou Pro Jogo</button>
-                <button class="flex-1 bg-marinho-card border border-marinho-light font-bold py-3.5 rounded-lg transition">Desfalque</button>
+            
+            <!-- Botão de Reset Exclusivo do Admin (Escondido por padrão) -->
+            <button id="btn-admin-reset" class="hidden w-full bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 font-bold p-3 rounded-lg text-xs transition uppercase tracking-wider cursor-pointer">
+                🧹 Limpar Lista da Semana (Admin)
+            </button>
+            
+            <p id="alerta-lista-fechada" class="hidden text-center text-xs bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 p-2.5 rounded-lg font-medium"></p>
+
+            <!-- Botões de Ação -->
+            <div id="acoes-presenca" class="flex gap-3">
+                <button id="btn-vou" class="flex-1 bg-marinho-card border border-marinho-light text-white font-bold py-3.5 rounded-lg transition cursor-pointer">Vou Pro Jogo</button>
+                <button id="btn-naovou" class="flex-1 bg-marinho-card border border-marinho-light text-white font-bold py-3.5 rounded-lg transition cursor-pointer">Desfalque</button>
+            </div>
+
+            <!-- Painel para Adicionar Convidado -->
+            <div id="bloco-convidado" class="bg-marinho-card border border-marinho-light rounded-xl p-3.5 space-y-2 hidden">
+                <p class="text-xs font-bold text-white/80 uppercase tracking-wider">➕ Levar Convidado (Linha)</p>
+                <div class="flex gap-2">
+                    <input type="text" id="input-convidado" placeholder="Nome do convidado" class="flex-1 bg-marinho-deep border border-marinho-light rounded-lg p-2 text-sm text-white focus:outline-none focus:border-white">
+                    <button id="btn-add-convidado" class="bg-white text-gray-950 px-4 py-2 rounded-lg text-xs font-black cursor-pointer hover:bg-gray-100">Incluir</button>
+                </div>
+            </div>
+
+            <!-- Listagem Dinâmica -->
+            <div id="painel-lista-presenca" class="space-y-4 pt-2">
+                <div class="bg-marinho-card border border-marinho-light rounded-xl p-6 text-center text-marinho-light text-sm">
+                    Carregando lista de presença...
+                </div>
             </div>
         </section>
 
@@ -112,10 +137,27 @@
         const SUPABASE_URL = "https://menkdxhnzshtdkxsjeoe.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_499H1fxIAJ9bmcwksN9jZg_gRuPzwhQ";
         
+        // EMAIL CONFIGURADO COMO ADMINISTRADOR DO CLUBE
+        const ADMIN_EMAIL = "macwellrezende@hotmail.com";
+
         const dbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let jogadorLogado = null;
 
-        // FUNÇÃO PARA BUSCAR E EXIBIR O ELENCO ATUALIZADO
+        // VALIDAÇÃO DE HORÁRIO DA LISTA (Quarta 05h até Sexta 22h)
+        function verificarJanelaLista() {
+            const agora = new Date();
+            const diaSemana = agora.getDay(); 
+            const hora = agora.getHours();
+
+            let aberta = false;
+            if (diaSemana === 3 && hora >= 5) aberta = true; 
+            if (diaSemana === 4) aberta = true; 
+            if (diaSemana === 5 && hora < 22) aberta = true; 
+
+            return aberta;
+        }
+
+        // FUNÇÃO PARA CARREGAR ELENCO E ARTILHARIA
         async function carregarJogadores() {
             const listaDiv = document.getElementById('lista-jogadores');
             try {
@@ -130,13 +172,14 @@
                 if (data && data.length > 0) {
                     listaDiv.innerHTML = "";
                     data.forEach(jog => {
+                        const categoriaFormatada = jog.categoria === 'Mensalista' ? 'Associado' : jog.categoria;
                         const card = document.createElement('div');
                         card.className = "bg-marinho-card border border-marinho-light rounded-xl p-4 flex flex-col space-y-3 shadow-md";
                         card.innerHTML = `
                             <div class="flex justify-between items-center">
                                 <div>
                                     <p class="font-bold text-white text-base tracking-wide">${jog.nome}</p>
-                                    <p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider mt-0.5">${jog.categoria}</p>
+                                    <p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider mt-0.5">${categoriaFormatada}</p>
                                 </div>
                                 <div class="bg-yellow-500/10 border border-yellow-500/30 px-3 py-1.5 rounded-lg flex items-center space-x-2 min-w-[75px] justify-center">
                                     <span class="text-base">⚽</span>
@@ -153,77 +196,215 @@
                         listaDiv.appendChild(card);
                     });
                 }
-            } catch (err) {
-                console.error("Erro ao carregar elenco:", err);
-            }
+            } catch (err) { console.error(err); }
         }
 
-        // FUNÇÃO DE RENDERIZAÇÃO FINANCEIRA INDIVIDUAL AJUSTADA
+        // FUNÇÃO DE RENDERIZAÇÃO FINANCEIRA INDIVIDUAL
         function renderizarFinanceiro(jog) {
             const container = document.getElementById('painel-financeiro');
-            
             const mesesAno = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
             const dataAtual = new Date();
             const mesAtualNome = mesesAno[dataAtual.getMonth()];
             const anoAtual = dataAtual.getFullYear();
             
-            // Regra sazonal: Julho e Agosto = 55.00 | Outros meses = 45.00
             let valorMensal = 45.00;
-            if (dataAtual.getMonth() === 6 || dataAtual.getMonth() === 7) {
-                valorMensal = 55.00;
-            }
-            
-            // Se houver saldo acumulado ou valor manual lançado na coluna valor_mensalidade, o app assume ele
-            if (jog.valor_mensalidade !== null && jog.valor_mensalidade !== undefined && jog.valor_mensalidade > 0) {
-                valorMensal = Number(jog.valor_mensalidade);
-            }
+            if (dataAtual.getMonth() === 6 || dataAtual.getMonth() === 7) valorMensal = 55.00;
+            if (jog.valor_mensalidade !== null && jog.valor_mensalidade !== undefined && jog.valor_mensalidade > 0) valorMensal = Number(jog.valor_mensalidade);
 
-            const mensPaga = jog.mensalidade_paga;
-            const statusMensalidade = mensPaga 
+            const statusMensalidade = jog.mensalidade_paga 
                 ? `<span class="bg-green-500/10 text-green-400 border border-green-500/20 px-3 py-1 rounded-full text-xs font-bold">🟢 PAGO</span>`
                 : `<span class="bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full text-xs font-bold">🔴 PENDENTE (R$ ${valorMensal.toFixed(2)})</span>`;
 
-            // Tratativa de Cartões
             const vCartoes = jog.cartoes_pendentes || 0;
             const statusCartoes = vCartoes > 0
                 ? `<span class="bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full text-xs font-bold">🔴 PENDENTE (R$ ${vCartoes.toFixed(2)})</span>`
                 : `<span class="bg-white/5 text-gray-400 border border-white/10 px-3 py-1 rounded-full text-xs font-medium">🟢 Sem Débitos</span>`;
 
-            // Tratativa de Multas (Texto atualizado conforme solicitação)
             const vMultas = jog.multas_pendentes || 0;
             const statusMultas = vMultas > 0
                 ? `<span class="bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full text-xs font-bold">🔴 PENDENTE (R$ ${vMultas.toFixed(2)})</span>`
                 : `<span class="bg-white/5 text-gray-400 border border-white/10 px-3 py-1 rounded-full text-xs font-medium">🟢 Sem Débitos</span>`;
 
             container.innerHTML = `
-                <!-- Bloco Mensalidade Dinâmica -->
                 <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 flex justify-between items-center shadow-sm">
-                    <div>
-                        <p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider">Mensalidade Atual</p>
-                        <p class="text-base font-bold text-white mt-0.5">${mesAtualNome} / ${anoAtual}</p>
-                    </div>
+                    <div><p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider">Mensalidade</p><p class="text-base font-bold text-white mt-0.5">${mesAtualNome} / ${anoAtual}</p></div>
                     <div>${statusMensalidade}</div>
                 </div>
-
-                <!-- Bloco Cartões -->
                 <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 flex justify-between items-center shadow-sm">
-                    <div>
-                        <p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider">Pendência de Cartões</p>
-                        <p class="text-base font-bold text-white mt-0.5">Acumulado das Rodadas</p>
-                    </div>
+                    <div><p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider">Pendência de Cartões</p><p class="text-base font-bold text-white mt-0.5">Acumulado das Rodadas</p></div>
                     <div>${statusCartoes}</div>
                 </div>
-
-                <!-- Bloco Multas Atualizado -->
                 <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 flex justify-between items-center shadow-sm">
-                    <div>
-                        <p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider">Multas Administrativas</p>
-                        <p class="text-base font-bold text-white mt-0.5">Nome na lista e ausência no jogo</p>
-                    </div>
+                    <div><p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider">Multas Administrativas</p><p class="text-base font-bold text-white mt-0.5">Nome na lista e ausência no jogo</p></div>
                     <div>${statusMultas}</div>
                 </div>
             `;
         }
+
+        // FUNÇÃO DE LISTA DE PRESENÇA TOTALMENTE REORDENADA E COM CONVIDADOS
+        async function carregarListaPresenca() {
+            const container = document.getElementById('painel-lista-presenca');
+            const btnVou = document.getElementById('btn-vou');
+            const btnNaoVou = document.getElementById('btn-naovou');
+            const blocoConvidado = document.getElementById('bloco-convidado');
+            const alertaFechada = document.getElementById('alerta-lista-fechada');
+            const btnResetAdmin = document.getElementById('btn-admin-reset');
+
+            const listaAberta = verificarJanelaLista();
+
+            // Exibe o botão de reset apenas se o e-mail logado for o do administrador
+            if (jogadorLogado && jogadorLogado.email === ADMIN_EMAIL) {
+                btnResetAdmin.classList.remove('hidden');
+            } else {
+                btnResetAdmin.classList.add('hidden');
+            }
+
+            // Gerencia travas visuais conforme horário da janela
+            if (!listaAberta) {
+                alertaFechada.classList.remove('hidden');
+                alertaFechada.innerText = "🔒 A lista abre quarta às 5h e encerra sexta às 22h.";
+                btnVou.disabled = true; btnNaoVou.disabled = true;
+                btnVou.classList.add('opacity-30'); btnNaoVou.classList.add('opacity-30');
+                blocoConvidado.classList.add('hidden');
+            } else {
+                alertaFechada.classList.add('hidden');
+                btnVou.disabled = false; btnNaoVou.disabled = false;
+                btnVou.classList.remove('opacity-30'); btnNaoVou.classList.remove('opacity-30');
+            }
+
+            try {
+                const { data: jogadores, error: errJ } = await dbClient
+                    .from('jogadores')
+                    .select('id, nome, presenca, categoria')
+                    .order('nome', { ascending: true });
+
+                const { data: convidados, error: errC } = await dbClient
+                    .from('convidados')
+                    .select('nome, jogador_id, jogadores(nome)');
+
+                if (errJ || errC) throw errJ || errC;
+
+                const associadosConfirmados = jogadores.filter(j => j.presenca === 'Confirmado' && j.categoria !== 'Goleiro');
+                const goleirosConfirmados = gamblers = jogadores.filter(j => j.presenca === 'Confirmado' && j.categoria === 'Goleiro');
+                const desfalques = jogadores.filter(j => j.presenca === 'Dispensado');
+                const semResposta = jogadores.filter(j => j.presenca === 'Sem Resposta' || !j.presenca);
+
+                if (jogadorLogado) {
+                    const atual = jogadores.find(j => j.id === jogadorLogado.id);
+                    if (atual) {
+                        jogadorLogado.presenca = atual.presenca;
+                        btnVou.className = "flex-1 font-bold py-3.5 rounded-lg transition border cursor-pointer text-center";
+                        btnNaoVou.className = "flex-1 font-bold py-3.5 rounded-lg transition border cursor-pointer text-center";
+
+                        if (jogadorLogado.presenca === 'Confirmado') {
+                            btnVou.classList.add('bg-green-600', 'text-white', 'border-green-500');
+                            btnNaoVou.classList.add('bg-marinho-card', 'text-gray-400', 'border-marinho-light');
+                            if (listaAberta) blocoConvidado.classList.remove('hidden'); 
+                        } else if (jogadorLogado.presenca === 'Dispensado') {
+                            btnVou.classList.add('bg-marinho-card', 'text-gray-400', 'border-marinho-light');
+                            btnNaoVou.classList.add('bg-red-600', 'text-white', 'border-red-500');
+                            blocoConvidado.classList.add('hidden');
+                        } else {
+                            btnVou.classList.add('bg-marinho-card', 'text-white', 'border-marinho-light');
+                            btnNaoVou.classList.add('bg-marinho-card', 'text-white', 'border-marinho-light');
+                            blocoConvidado.classList.add('hidden');
+                        }
+                    }
+                }
+
+                const listaConvidadosHTML = convidados.map(c => `${c.nome} <span class="text-[11px] text-marinho-light font-normal">(Convidado de ${c.jogadores?.nome || 'Anônimo'})</span>`).join(', ');
+                const totalLinha = associadosConfirmados.length + convidados.length;
+
+                container.innerHTML = `
+                    <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 space-y-3">
+                        <div class="flex justify-between items-center border-b border-marinho-light pb-2">
+                            <p class="text-xs font-bold uppercase tracking-wider text-green-400">🏃 Jogadores de Linha Confirmados</p>
+                            <span class="bg-green-500/10 text-green-400 text-xs px-2 py-0.5 rounded-full font-black">${totalLinha}</span>
+                        </div>
+                        <p class="text-sm text-white font-semibold leading-relaxed">
+                            ${associadosConfirmados.map(j => j.nome).join(', ') || '<span class="text-xs text-marinho-light italic">Nenhum associado confirmado.</span>'}
+                        </p>
+                        ${convidados.length > 0 ? `
+                        <div class="pt-2 border-t border-marinho-light/30">
+                            <p class="text-xs font-bold text-yellow-400 uppercase tracking-tight mb-1">Convidados:</p>
+                            <p class="text-sm text-gray-200 font-medium leading-relaxed">${listaConvidadosHTML}</p>
+                        </div>` : ''}
+                    </div>
+
+                    <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 space-y-2">
+                        <div class="flex justify-between items-center border-b border-marinho-light pb-1.5 mb-2">
+                            <p class="text-xs font-bold uppercase tracking-wider text-cyan-400">🧤 Goleiros Confirmados</p>
+                            <span class="bg-cyan-500/10 text-cyan-400 text-xs px-2 py-0.5 rounded-full font-black">${goleirosConfirmados.length}</span>
+                        </div>
+                        <p class="text-sm text-cyan-100 font-bold leading-relaxed">
+                            ${goleirosConfirmados.map(j => j.nome).join(', ') || '<span class="text-xs text-marinho-light italic">Nenhum goleiro confirmado.</span>'}
+                        </p>
+                    </div>
+
+                    <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 space-y-2">
+                        <div class="flex justify-between items-center border-b border-marinho-light pb-1.5 mb-2">
+                            <p class="text-xs font-bold uppercase tracking-wider text-red-400">❌ Desfalques</p>
+                            <span class="bg-red-500/10 text-red-400 text-xs px-2 py-0.5 rounded-full font-black">${desfalques.length}</span>
+                        </div>
+                        <p class="text-sm text-marinho-light/80 leading-relaxed">
+                            ${desfalques.map(j => j.nome).join(', ') || '<span class="text-xs text-marinho-light italic">Nenhum desfalque.</span>'}
+                        </p>
+                    </div>
+
+                    <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 space-y-2">
+                        <div class="flex justify-between items-center border-b border-marinho-light pb-1.5 mb-2">
+                            <p class="text-xs font-bold uppercase tracking-wider text-gray-400">⏳ No Baratino (Sem Resposta)</p>
+                            <span class="bg-white/5 text-gray-400 text-xs px-2 py-0.5 rounded-full font-black">${semResposta.length}</span>
+                        </div>
+                        <p class="text-xs text-marinho-light/60 leading-relaxed">
+                            ${semResposta.map(j => j.nome).join(', ') || '<span class="text-xs text-green-400/60 italic">Elenco completo respondeu!</span>'}
+                        </p>
+                    </div>
+                `;
+            } catch (err) { console.error(err); }
+        }
+
+        async function registrarPresenca(status) {
+            if (!jogadorLogado) return;
+            try {
+                await dbClient.from('jogadores').update({ presenca: status }).eq('id', jogadorLogado.id);
+                if (status === 'Dispensado') await dbClient.from('convidados').delete().eq('jogador_id', jogadorLogado.id);
+                await carregarListaPresenca();
+            } catch (err) { console.error(err); }
+        }
+
+        // COMANDO MANUAL DE RESET DO ADMINISTRAÇÃO
+        document.getElementById('btn-admin-reset').addEventListener('click', async () => {
+            if (!confirm("⚠️ Tem certeza que deseja limpar as presenças e convidados para iniciar a nova semana? Esta ação não pode ser desfeita.")) return;
+            
+            try {
+                // Força o status de volta ao padrão
+                await dbClient.from('jogadores').update({ presenca: 'Sem Resposta' }).neq('id', '00000000-0000-0000-0000-000000000000');
+                // Deleta todos os convidados pendentes
+                await dbClient.from('convidados').delete().neq('id', 0);
+                alert("✅ Lista limpa com sucesso!");
+                await carregarListaPresenca();
+            } catch (err) {
+                console.error(err);
+                alert("Erro técnico ao realizar o reset.");
+            }
+        });
+
+        // AÇÃO PARA ADICIONAR CONVIDADO
+        document.getElementById('btn-add-convidado').addEventListener('click', async () => {
+            const input = document.getElementById('input-convidado');
+            const nome = input.value.trim();
+            if (!nome || !jogadorLogado) return;
+
+            try {
+                await dbClient.from('convidados').insert({ nome: nome, jogador_id: jogadorLogado.id });
+                input.value = "";
+                await carregarListaPresenca();
+            } catch (err) { console.error(err); }
+        });
+
+        document.getElementById('btn-vou').addEventListener('click', () => registrarPresenca('Confirmado'));
+        document.getElementById('btn-naovou').addEventListener('click', () => registrarPresenca('Dispensado'));
 
         // FORMULÁRIO DE LOGIN
         document.getElementById('form-login').addEventListener('submit', async function(event) {
@@ -255,6 +436,7 @@
                     
                     await carregarJogadores();
                     renderizarFinanceiro(data);
+                    await carregarListaPresenca();
                     
                     setTimeout(() => {
                         document.getElementById('tela-login').classList.add('hidden');
@@ -290,6 +472,7 @@
                         if (data) {
                             jogadorLogado = data;
                             if (aba === 'financeiro') renderizarFinanceiro(data);
+                            if (aba === 'presenca') await carregarListaPresenca();
                         }
                     } catch (err) { console.error(err); }
                 }
