@@ -142,7 +142,7 @@
         const dbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let SampleLogado = null;
 
-        // VALIDAÇÃO OPERACIONAL DO FUSO HORÁRIO (QUARTA 05H ATÉ SEXTA 22H)
+        // VALIDAÇÃO OPERACIONAL DO FUSO HORÁRIO
         function verificarJanelaLista() {
             const dataBrasilia = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Bahia"}));
             const diaSemana = dataBrasilia.getDay(); 
@@ -198,7 +198,7 @@
             } catch (err) { console.error("Erro Elenco:", err); }
         }
 
-        // MODELAGEM DO EXTRATO FINANCEIRO INDIVIDUAL INDEPENDENTE
+        // MODELAGEM DO EXTRATO FINANCEIRO INDIVIDUAL
         function renderizarFinanceiro(jog) {
             const container = document.getElementById('painel-financeiro');
             const mesesAno = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -275,11 +275,14 @@
                     .select('id, nome, presenca, categoria')
                     .order('nome', { ascending: true });
 
-                const { data: convidados, error: errC } = await dbClient
-                    .from('convidados')
-                    .select('nome, jogador_id, jogadores(nome)');
+                // Busca convidados tratando erro de tabela não criada de forma segura
+                let convidados = [];
+                const resC = await dbClient.from('convidados').select('nome, jogador_id, jogadores(nome)');
+                if (!resC.error && resC.data) {
+                    convidados = resC.data;
+                }
 
-                if (errJ || errC) throw errJ || errC;
+                if (errJ) throw errJ;
 
                 const associadosConfirmados = jogadores.filter(j => j.presenca === 'Confirmado' && j.categoria !== 'Goleiro');
                 const goleirosConfirmados = jogadores.filter(j => j.presenca === 'Confirmado' && j.categoria === 'Goleiro');
@@ -290,8 +293,8 @@
                     const atual = jogadores.find(j => j.id === SampleLogado.id);
                     if (atual) {
                         SampleLogado.presenca = atual.presenca;
-                        btnVou.className = "flex-1 font-bold py-3.5 rounded-lg transition border cursor-pointer text-center";
-                        btnNaoVou.className = "flex-1 font-bold py-3.5 rounded-lg transition border cursor-pointer text-center";
+                        btnVou.className = "flex-1 font-bold py-3.5 rounded-lg transition border text-center cursor-pointer";
+                        btnNaoVou.className = "flex-1 font-bold py-3.5 rounded-lg transition border text-center cursor-pointer";
 
                         if (SampleLogado.presenca === 'Confirmado') {
                             btnVou.classList.add('bg-green-600', 'text-white', 'border-green-500');
@@ -309,8 +312,8 @@
                     }
                 }
 
-                const listaConvidadosHTML = convidados ? convidados.map(c => `${c.nome} <span class="text-[11px] text-marinho-light font-normal">(Convidado de ${c.jogadores?.nome || 'Anônimo'})</span>`).join(', ') : '';
-                const totalLinha = associadosConfirmados.length + (convidados ? convidados.length : 0);
+                const listaConvidadosHTML = convidados.length > 0 ? convidados.map(c => `${c.nome} <span class="text-[11px] text-marinho-light font-normal">(Convidado de ${c.jogadores?.nome || 'Anônimo'})</span>`).join(', ') : '';
+                const totalLinha = associadosConfirmados.length + convidados.length;
 
                 container.innerHTML = `
                     <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 space-y-3">
@@ -321,7 +324,7 @@
                         <p class="text-sm text-white font-semibold leading-relaxed">
                             ${associadosConfirmados.map(j => j.nome).join(', ') || '<span class="text-xs text-marinho-light italic">Nenhum associado confirmado.</span>'}
                         </p>
-                        ${convidados && convidados.length > 0 ? `
+                        ${convidados.length > 0 ? `
                         <div class="pt-2 border-t border-marinho-light/30">
                             <p class="text-xs font-bold text-yellow-400 uppercase tracking-tight mb-1">Convidados:</p>
                             <p class="text-sm text-gray-200 font-medium leading-relaxed">${listaConvidadosHTML}</p>
@@ -365,27 +368,29 @@
             if (!SampleLogado) return;
             try {
                 await dbClient.from('jogadores').update({ presenca: status }).eq('id', SampleLogado.id);
-                if (status === 'Dispensado') await dbClient.from('convidados').delete().eq('jogador_id', SampleLogado.id);
+                // Tenta deletar convidados de forma segura prevenindo falha de tabela
+                try {
+                    if (status === 'Dispensado') await dbClient.from('convidados').delete().eq('jogador_id', SampleLogado.id);
+                } catch(e){}
                 await carregarListaPresenca();
             } catch (err) { console.error("Erro update presenca:", err); }
         }
 
-        // EVENTOS DE DISPARO DA TELA DE PRESENÇA
         document.getElementById('btn-vou').addEventListener('click', () => registrarPresenca('Confirmado'));
         document.getElementById('btn-naovou').addEventListener('click', () => registrarPresenca('Dispensado'));
 
-        // COMANDO DE COBERTURA DO ADMIN (RESET MANUAL)
+        // COMANDO DE RESET MANUAL DO ADMIN
         document.getElementById('btn-admin-reset').addEventListener('click', async () => {
             if (!confirm("⚠️ Tem certeza que deseja limpar as presenças e convidados para iniciar a nova semana?")) return;
             try {
                 await dbClient.from('jogadores').update({ presenca: 'Sem Resposta' }).neq('presenca', 'Inexistente');
-                await dbClient.from('convidados').delete().neq('id', 0);
+                try { await dbClient.from('convidados').delete().neq('id', 0); } catch(e){}
                 alert("✅ Lista limpa com sucesso!");
                 await carregarListaPresenca();
             } catch (err) { console.error(err); }
         });
 
-        // MECANISMO DE INCLUSÃO DE CONVIDADOS CORRIGIDO SINTATICAMENTE
+        // MECANISMO DE INCLUSÃO DE CONVIDADOS CORRIGIDO
         document.getElementById('btn-add-convidado').addEventListener('click', async () => {
             const input = document.getElementById('input-convidado');
             const nomeConvidado = input.value.trim();
@@ -397,7 +402,10 @@
                 });
                 input.value = "";
                 await carregarListaPresenca();
-            } catch (err) { console.error("Erro insert convidado:", err); }
+            } catch (err) { 
+                console.error("Erro insert convidado:", err); 
+                alert("Erro operacional: certifique-se de executar o comando SQL do Passo 1 no Supabase.");
+            }
         });
 
         // FORMULÁRIO E INFRAESTRUTURA DE LOGIN
@@ -448,6 +456,7 @@
                 }
             } catch (err) {
                 console.error("Erro fatal capturado no login:", err);
+                feedback.innerText = "Erro ao conectar. Rode o script do Passo 1 no Supabase.";
                 btnEntrar.disabled = false;
                 btnEntrar.classList.remove('opacity-50');
             }
@@ -455,34 +464,42 @@
 
         // ROTEAMENTO DINÂMICO ENTRE ABAS
         ['jogadores', 'financeiro', 'presenca', 'votacao'].forEach(aba => {
-            document.getElementById(`btn-aba-${aba}`).addEventListener('click', async function(e) {
-                const abas = ['jogadores', 'financeiro', 'presenca', 'votacao'];
-                abas.forEach(a => document.getElementById(`aba-${a}`).classList.add('hidden'));
-                document.getElementById(`aba-${aba}`).classList.remove('hidden');
-                
-                if (SampleLogado) {
-                    try {
-                        const { data } = await dbClient.from('jogadores').select('*').eq('id', SampleLogado.id).single();
-                        if (data) {
-                            SampleLogado = data;
-                            if (aba === 'financeiro') renderizarFinanceiro(data);
-                            if (aba === 'presenca') await carregarListaPresenca();
-                        }
-                    } catch (err) { console.error("Erro Sync Aba:", err); }
-                }
+            const btn = document.getElementById(`btn-aba-${aba}`);
+            if (btn) {
+                btn.addEventListener('click', async function(e) {
+                    const abas = ['jogadores', 'financeiro', 'presenca', 'votacao'];
+                    abas.forEach(a => {
+                        const el = document.getElementById(`aba-${a}`);
+                        if (el) el.classList.add('hidden');
+                    });
+                    
+                    const targetEl = document.getElementById(`aba-${aba}`);
+                    if (targetEl) targetEl.classList.remove('hidden');
+                    
+                    if (SampleLogado) {
+                        try {
+                            const { data } = await dbClient.from('jogadores').select('*').eq('id', SampleLogado.id).single();
+                            if (data) {
+                                SampleLogado = data;
+                                if (aba === 'financeiro') renderizarFinanceiro(data);
+                                if (aba === 'presenca') await carregarListaPresenca();
+                            }
+                        } catch (err) { console.error("Erro Sync Aba:", err); }
+                    }
 
-                if (aba === 'jogadores') {
-                    carregarJogadores();
-                }
-                
-                const botoes = document.querySelectorAll('#menu-inferior button');
-                botoes.forEach(b => {
-                    b.classList.remove('text-white', 'font-bold');
-                    b.classList.add('text-marinho-light');
+                    if (aba === 'jogadores') {
+                        carregarJogadores();
+                    }
+                    
+                    const botoes = document.querySelectorAll('#menu-inferior button');
+                    botoes.forEach(b => {
+                        b.classList.remove('text-white', 'font-bold');
+                        b.classList.add('text-marinho-light');
+                    });
+                    e.currentTarget.classList.remove('text-marinho-light');
+                    e.currentTarget.classList.add('text-white', 'font-bold');
                 });
-                e.currentTarget.classList.remove('text-marinho-light');
-                e.currentTarget.classList.add('text-white', 'font-bold');
-            });
+            }
         });
 
         document.getElementById('btn-logout').addEventListener('click', () => {
