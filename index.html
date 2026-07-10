@@ -140,24 +140,23 @@
         const ADMIN_EMAIL = "macwellrezende@hotmail.com";
 
         const dbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        let jogadorLogado = null;
+        let SampleLogado = null;
 
-        // VALIDAÇÃO DE HORÁRIO DA LISTA (Quarta 05h até Sexta 22h)
+        // FUNÇÃO CORRIGIDA DE VALIDAÇÃO COM FUSO HORÁRIO DE BRASÍLIA
         function verificarJanelaLista() {
-            const agora = new Date();
-            const diaSemana = agora.getDay(); 
-            const hora = agora.getHours();
+            // Obtém a data e hora ajustada especificamente para o fuso horário de Brasília
+            const dataBrasilia = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Bahia"}));
+            const diaSemana = dataBrasilia.getDay(); // 0 = Domingo, 3 = Quarta, 5 = Sexta
+            const hora = dataBrasilia.getHours();
 
             let aberta = false;
-            if (diaSemana === 3 && hora >= 5) aberta = true; 
-            if (diaSemana === 4) aberta = true; 
-            if (diaSemana === 5 && hora < 22) aberta = true; 
+            if (diaSemana === 3 && hora >= 5) aberta = true; // Abre Quarta às 05h
+            if (diaSemana === 4) abierta = true; // Quinta fica aberta o dia todo
+            if (diaSemana === 5 && hora < 22) aberta = true; // Fecha Sexta às 22h
 
-            // Para testes: force "return true;" caso esteja fora do horário e queira ver funcionando na hora
             return aberta;
         }
 
-        // FUNÇÃO PARA CARREGAR ELENCO E ARTILHARIA
         async function carregarJogadores() {
             const listaDiv = document.getElementById('lista-jogadores');
             try {
@@ -199,7 +198,6 @@
             } catch (err) { console.error(err); }
         }
 
-        // FUNÇÃO DE RENDERIZAÇÃO FINANCEIRA INDIVIDUAL
         function renderizarFinanceiro(jog) {
             const container = document.getElementById('painel-financeiro');
             const mesesAno = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -241,7 +239,6 @@
             `;
         }
 
-        // FUNÇÃO DE LISTA DE PRESENÇA CORRIGIDA
         async function carregarListaPresenca() {
             const container = document.getElementById('painel-lista-presenca');
             const btnVou = document.getElementById('btn-vou');
@@ -252,7 +249,7 @@
 
             const listaAberta = verificarJanelaLista();
 
-            if (jogadorLogado && jogadorLogado.email === ADMIN_EMAIL) {
+            if (SampleLogado && SampleLogado.email === ADMIN_EMAIL) {
                 btnResetAdmin.classList.remove('hidden');
             } else {
                 btnResetAdmin.classList.add('hidden');
@@ -287,18 +284,18 @@
                 const desfalques = jogadores.filter(j => j.presenca === 'Dispensado');
                 const semResposta = jogadores.filter(j => j.presenca === 'Sem Resposta' || !j.presenca);
 
-                if (jogadorLogado) {
-                    const atual = jogadores.find(j => j.id === jogadorLogado.id);
+                if (SampleLogado) {
+                    const atual = jogadores.find(j => j.id === SampleLogado.id);
                     if (atual) {
-                        jogadorLogado.presenca = atual.presenca;
+                        SampleLogado.presenca = atual.presenca;
                         btnVou.className = "flex-1 font-bold py-3.5 rounded-lg transition border cursor-pointer text-center";
                         btnNaoVou.className = "flex-1 font-bold py-3.5 rounded-lg transition border cursor-pointer text-center";
 
-                        if (jogadorLogado.presenca === 'Confirmado') {
+                        if (SampleLogado.presenca === 'Confirmado') {
                             btnVou.classList.add('bg-green-600', 'text-white', 'border-green-500');
                             btnNaoVou.classList.add('bg-marinho-card', 'text-gray-400', 'border-marinho-light');
                             if (listaAberta) blocoConvidado.classList.remove('hidden'); 
-                        } else if (jogadorLogado.presenca === 'Dispensado') {
+                        } else if (SampleLogado.presenca === 'Dispensado') {
                             btnVou.classList.add('bg-marinho-card', 'text-gray-400', 'border-marinho-light');
                             btnNaoVou.classList.add('bg-red-600', 'text-white', 'border-red-500');
                             blocoConvidado.classList.add('hidden');
@@ -344,7 +341,7 @@
                             <p class="text-xs font-bold uppercase tracking-wider text-red-400">❌ Desfalques</p>
                             <span class="bg-red-500/10 text-red-400 text-xs px-2 py-0.5 rounded-full font-black">${desfalques.length}</span>
                         </div>
-                        <p class="text-sm text-marinho-light/80 leading-relaxed">
+                        <p class="text-sm text-marinho-light/80 leather leading-relaxed">
                             ${desfalques.map(j => j.nome).join(', ') || '<span class="text-xs text-marinho-light italic">Nenhum desfalque.</span>'}
                         </p>
                     </div>
@@ -363,15 +360,14 @@
         }
 
         async function registrarPresenca(status) {
-            if (!jogadorLogado) return;
+            if (!SampleLogado) return;
             try {
-                await dbClient.from('jogadores').update({ presenca: status }).eq('id', jogadorLogado.id);
-                if (status === 'Dispensado') await dbClient.from('convidados').delete().eq('jogador_id', jogadorLogado.id);
+                await dbClient.from('jogadores').update({ presenca: status }).eq('id', SampleLogado.id);
+                if (status === 'Dispensado') await dbClient.from('convidados').delete().eq('jogador_id', SampleLogado.id);
                 await carregarListaPresenca();
             } catch (err) { console.error(err); }
         }
 
-        // COMANDO MANUAL DE RESET DO ADMINISTRAÇÃO
         document.getElementById('btn-admin-reset').addEventListener('click', async () => {
             if (!confirm("⚠️ Tem certeza que deseja limpar as presenças e convidados para iniciar a nova semana?")) return;
             try {
@@ -382,13 +378,12 @@
             } catch (err) { console.error(err); }
         });
 
-        // AÇÃO PARA ADICIONAR CONVIDADO
         document.getElementById('btn-add-convidado').addEventListener('click', async () => {
             const input = document.getElementById('input-convidado');
             const nome = input.value.trim();
-            if (!nome || !jogadorLogado) return;
+            if (!nome || !SampleLogado) return;
             try {
-                await dbClient.from('convidados').insert({ nome: nome, jogador_id: jogadorLogado.id });
+                await dbClient.from('convidados').insert({ nome: nome, jogador_id: SampleLogado.id });
                 input.value = "";
                 await carregarListaPresenca();
             } catch (err) { console.error(err); }
@@ -420,7 +415,7 @@
                 if (error) throw error;
 
                 if (data) {
-                    jogadorLogado = data;
+                    SampleLogado = data;
                     feedback.classList.remove('bg-white/10', 'text-white');
                     feedback.classList.add('bg-green-900/40', 'text-green-200');
                     feedback.innerText = `Autorizado! Bem-vindo, ${data.nome}.`;
@@ -457,11 +452,11 @@
                 abas.forEach(a => document.getElementById(`aba-${a}`).classList.add('hidden'));
                 document.getElementById(`aba-${aba}`).classList.remove('hidden');
                 
-                if (jogadorLogado) {
+                if (SampleLogado) {
                     try {
-                        const { data } = await dbClient.from('jogadores').select('*').eq('id', jogadorLogado.id).single();
+                        const { data } = await dbClient.from('jogadores').select('*').eq('id', SampleLogado.id).single();
                         if (data) {
-                            jogadorLogado = data;
+                            SampleLogado = data;
                             if (aba === 'financeiro') renderizarFinanceiro(data);
                             if (aba === 'presenca') await carregarListaPresenca();
                         }
