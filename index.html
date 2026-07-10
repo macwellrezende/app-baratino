@@ -86,20 +86,54 @@
         <section id="aba-presenca" class="hidden space-y-4">
             <h2 class="text-xl font-bold border-b border-marinho-light pb-2">📋 Confirmar Presença</h2>
             
-            <!-- Botão de Reset Exclusivo do Admin -->
-            <button id="btn-admin-reset" class="hidden w-full bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 font-bold p-3 rounded-lg text-xs transition uppercase tracking-wider cursor-pointer mb-2">
-                🧹 Limpar Lista da Semana (Admin)
-            </button>
+            <!-- CONTROLE EXCLUSIVO DO ADMIN (CADASTRO, RESET E INTERFERÊNCIA DE LISTA) -->
+            <div id="painel-controle-admin" class="hidden bg-marinho-card border border-red-500/20 rounded-xl p-4 space-y-4 shadow-lg">
+                <p class="text-xs font-black text-red-400 uppercase tracking-widest">⚙️ Painel de Controle do Admin</p>
+                
+                <!-- NOVO: Gerenciar Lista de Terceiros (Confirmar por quem tá sem zap/net) -->
+                <div class="space-y-2 pt-1 border-t border-marinho-light/40">
+                    <p class="text-[11px] font-bold text-white/80 uppercase">Interferência Manual na Lista</p>
+                    <div class="flex flex-col gap-2">
+                        <select id="admin-select-jogador" class="w-full bg-marinho-deep border border-marinho-light rounded-lg p-2 text-xs text-gray-200 focus:outline-none">
+                            <option value="">Selecione um jogador...</option>
+                        </select>
+                        <div class="flex gap-2">
+                            <button id="btn-admin-forcar-vou" class="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-2 rounded-lg text-xs transition cursor-pointer">Confirmar Presença</button>
+                            <button id="btn-admin-forcar-naovou" class="flex-1 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 font-bold py-2 rounded-lg text-xs transition cursor-pointer">Lançar Desfalque</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inclusão de novos jogadores no clube -->
+                <div class="space-y-2 pt-3 border-t border-marinho-light/40">
+                    <p class="text-[11px] font-bold text-white/80 uppercase">Novo Atleta no Elenco</p>
+                    <input type="text" id="admin-novo-nome" placeholder="Nome Completo" class="w-full bg-marinho-deep border border-marinho-light rounded-lg p-2 text-xs text-white">
+                    <input type="email" id="admin-novo-email" placeholder="E-mail de acesso" class="w-full bg-marinho-deep border border-marinho-light rounded-lg p-2 text-xs text-white">
+                    <div class="flex gap-2">
+                        <select id="admin-nova-cat" class="flex-1 bg-marinho-deep border border-marinho-light rounded-lg p-2 text-xs text-gray-300">
+                            <option value="Associado">Associado</option>
+                            <option value="Goleiro">Goleiro</option>
+                        </select>
+                        <button id="btn-admin-add-jogador" class="bg-white text-gray-950 font-black px-4 rounded-lg text-xs cursor-pointer hover:bg-gray-100">Salvar</button>
+                    </div>
+                </div>
+
+                <div class="pt-2 border-t border-marinho-light/40">
+                    <button id="btn-admin-reset" class="w-full bg-red-600/10 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 font-bold p-2 rounded-lg text-[11px] transition uppercase tracking-wider cursor-pointer">
+                        🧹 Limpar Lista da Semana
+                    </button>
+                </div>
+            </div>
             
             <p id="alerta-lista-fechada" class="hidden text-center text-xs bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 p-2.5 rounded-lg font-medium mb-3"></p>
 
-            <!-- Botões de Ação -->
+            <!-- Botões de Ação do Atleta Comum -->
             <div id="acoes-presenca" class="flex gap-3">
                 <button id="btn-vou" class="flex-1 bg-marinho-card border border-marinho-light text-white font-bold py-3.5 rounded-lg transition cursor-pointer">Vou Pro Jogo</button>
                 <button id="btn-naovou" class="flex-1 bg-marinho-card border border-marinho-light text-white font-bold py-3.5 rounded-lg transition cursor-pointer">Desfalque</button>
             </div>
 
-            <!-- Painel para Adicionar Convidado -->
+            <!-- Painel para Adicionar Múltiplos Convidados -->
             <div id="bloco-convidado" class="bg-marinho-card border border-marinho-light rounded-xl p-3.5 space-y-2 hidden">
                 <p class="text-xs font-bold text-white/80 uppercase tracking-wider">➕ Levar Convidado (Linha)</p>
                 <div class="flex gap-2">
@@ -247,14 +281,16 @@
             const btnNaoVou = document.getElementById('btn-naovou');
             const blocoConvidado = document.getElementById('bloco-convidado');
             const alertaFechada = document.getElementById('alerta-lista-fechada');
-            const btnResetAdmin = document.getElementById('btn-admin-reset');
+            const painelAdmin = document.getElementById('painel-controle-admin');
+            const selectJogadorAdmin = document.getElementById('admin-select-jogador');
 
             const listaAberta = verificarJanelaLista();
 
+            // Ativa visualização estrutural do Admin e alimenta o seletor de elenco
             if (SampleLogado && SampleLogado.email === ADMIN_EMAIL) {
-                btnResetAdmin.classList.remove('hidden');
+                painelAdmin.classList.remove('hidden');
             } else {
-                btnResetAdmin.classList.add('hidden');
+                painelAdmin.classList.add('hidden');
             }
 
             if (!listaAberta) {
@@ -275,14 +311,22 @@
                     .select('id, nome, presenca, categoria')
                     .order('nome', { ascending: true });
 
-                // Busca convidados tratando erro de tabela não criada de forma segura
-                let convidados = [];
-                const resC = await dbClient.from('convidados').select('nome, jogador_id, jogadores(nome)');
-                if (!resC.error && resC.data) {
-                    convidados = resC.data;
-                }
+                const { data: convidados, error: errC } = await dbClient
+                    .from('convidados')
+                    .select('id, nome, j_id:jogador_id, jogadores(nome)');
 
-                if (errJ) throw errJ;
+                if (errJ || errC) throw errJ || errC;
+
+                // ATUALIZA O SELETOR DO ADMIN EM TEMPO REAL
+                if (SampleLogado && SampleLogado.email === ADMIN_EMAIL && jogadores) {
+                    const valorSelecionadoAntes = selectJogadorAdmin.value;
+                    selectJogadorAdmin.innerHTML = '<option value="">Selecione um jogador...</option>';
+                    jogadores.forEach(j => {
+                        const statusAtualText = j.presenca === 'Confirmado' ? ' (Confirmado)' : (j.presenca === 'Dispensado' ? ' (Desfalque)' : ' (Sem Resposta)');
+                        selectJogadorAdmin.innerHTML += `<option value="${j.id}">${j.nome}${statusAtualText}</option>`;
+                    });
+                    selectJogadorAdmin.value = valorSelecionadoAntes;
+                }
 
                 const associadosConfirmados = jogadores.filter(j => j.presenca === 'Confirmado' && j.categoria !== 'Goleiro');
                 const goleirosConfirmados = jogadores.filter(j => j.presenca === 'Confirmado' && j.categoria === 'Goleiro');
@@ -290,9 +334,9 @@
                 const semResposta = jogadores.filter(j => j.presenca !== 'Confirmado' && j.presenca !== 'Dispensado');
 
                 if (SampleLogado) {
-                    const atual = jogadores.find(j => j.id === SampleLogado.id);
-                    if (atual) {
-                        SampleLogado.presenca = atual.presenca;
+                    const mt = jogadores.find(j => j.id === SampleLogado.id);
+                    if (mt) {
+                        SampleLogado.presenca = mt.presenca;
                         btnVou.className = "flex-1 font-bold py-3.5 rounded-lg transition border text-center cursor-pointer";
                         btnNaoVou.className = "flex-1 font-bold py-3.5 rounded-lg transition border text-center cursor-pointer";
 
@@ -312,7 +356,24 @@
                     }
                 }
 
-                const listaConvidadosHTML = convidados.length > 0 ? convidados.map(c => `${c.nome} <span class="text-[11px] text-marinho-light font-normal">(Convidado de ${c.jogadores?.nome || 'Anônimo'})</span>`).join(', ') : '';
+                let blocoConvidadosHTML = "";
+                if (convidados && convidados.length > 0) {
+                    const itens = convidados.map(c => {
+                        const donoOuAdmin = (SampleLogado && (c.j_id == SampleLogado.id || SampleLogado.email === ADMIN_EMAIL));
+                        const botaoExcluir = donoOuAdmin 
+                            ? `<button onclick="removerConvidado(${c.id})" class="text-red-500 hover:text-red-400 ml-1.5 p-0.5 font-bold cursor-pointer transition text-xs">❌</button>` 
+                            : '';
+                        return `<span class="inline-flex items-center bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg text-gray-200 font-medium text-xs">${c.nome} <span class="text-[10px] text-marinho-light font-normal ml-1">(${c.jogadores?.nome || 'Atleta'})</span>${botaoExcluir}</span>`;
+                    }).join(' ');
+
+                    blocoConvidadosHTML = `
+                        <div class="pt-2 border-t border-marinho-light/30">
+                            <p class="text-xs font-bold text-yellow-400 uppercase tracking-tight mb-2">Convidados de Linha:</p>
+                            <div class="flex flex-wrap gap-1.5">${itens}</div>
+                        </div>
+                    `;
+                }
+
                 const totalLinha = associadosConfirmados.length + convidados.length;
 
                 container.innerHTML = `
@@ -324,11 +385,7 @@
                         <p class="text-sm text-white font-semibold leading-relaxed">
                             ${associadosConfirmados.map(j => j.nome).join(', ') || '<span class="text-xs text-marinho-light italic">Nenhum associado confirmado.</span>'}
                         </p>
-                        ${convidados.length > 0 ? `
-                        <div class="pt-2 border-t border-marinho-light/30">
-                            <p class="text-xs font-bold text-yellow-400 uppercase tracking-tight mb-1">Convidados:</p>
-                            <p class="text-sm text-gray-200 font-medium leading-relaxed">${listaConvidadosHTML}</p>
-                        </div>` : ''}
+                        ${blocoConvidadosHTML}
                     </div>
 
                     <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 space-y-2">
@@ -361,54 +418,111 @@
                         </p>
                     </div>
                 `;
-            } catch (err) { console.error("Erro render lista:", err); }
+            } catch (err) { console.error(err); }
         }
 
         async function registrarPresenca(status) {
             if (!SampleLogado) return;
             try {
                 await dbClient.from('jogadores').update({ presenca: status }).eq('id', SampleLogado.id);
-                // Tenta deletar convidados de forma segura prevenindo falha de tabela
-                try {
-                    if (status === 'Dispensado') await dbClient.from('convidados').delete().eq('jogador_id', SampleLogado.id);
-                } catch(e){}
+                if (status === 'Dispensado') await dbClient.from('convidados').delete().eq('jogador_id', SampleLogado.id);
                 await carregarListaPresenca();
-            } catch (err) { console.error("Erro update presenca:", err); }
+            } catch (err) { console.error(err); }
         }
 
-        document.getElementById('btn-vou').addEventListener('click', () => registrarPresenca('Confirmado'));
-        document.getElementById('btn-naovou').addEventListener('click', () => registrarPresenca('Dispensado'));
+        async function removerConvidado(idConvidado) {
+            if (!confirm("Deseja realmente cancelar este convidado?")) return;
+            try {
+                await dbClient.from('convidados').delete().eq('id', idConvidado);
+                await carregarListaPresenca();
+            } catch (err) { console.error(err); }
+        }
 
-        // COMANDO DE RESET MANUAL DO ADMIN
+        // COMANDO EXCLUSIVO DO ADMIN: FORÇAR MUDANÇA EM ATLETA DO ELENCO
+        async function forcarStatusJogadorAdmin(status) {
+            const selectJogadorAdmin = document.getElementById('admin-select-jogador');
+            const idJogador = selectJogadorAdmin.value;
+            if (!idJogador) {
+                alert("Selecione um jogador do elenco para fazer a alteração manual.");
+                return;
+            }
+            try {
+                await dbClient.from('jogadores').update({ presenca: status }).eq('id', idJogador);
+                if (status === 'Dispensado') await dbClient.from('convidados').delete().eq('jogador_id', idJogador);
+                alert("✅ Lista atualizada pelo Admin!");
+                await carregarListaPresenca();
+            } catch (err) { console.error(err); }
+        }
+
+        document.getElementById('btn-admin-forcar-vou').addEventListener('click', () => forcarStatusJogadorAdmin('Confirmado'));
+        document.getElementById('btn-admin-forcar-naovou').addEventListener('click', () => forcarStatusJogadorAdmin('Dispensado'));
+
+        // AÇÃO EXCLUSIVA DO ADMIN: CADASTRO DE NOVO ATLETA
+        document.getElementById('btn-admin-add-jogador').addEventListener('click', async () => {
+            const inputNome = document.getElementById('admin-novo-nome');
+            const inputEmail = document.getElementById('admin-novo-email');
+            const selectCat = document.getElementById('admin-nova-cat');
+
+            const nome = inputNome.value.trim();
+            const email = inputEmail.value.trim().toLowerCase();
+            const categoria = selectCat.value;
+
+            if (!nome || !email) {
+                alert("Preencha o nome e e-mail do novo jogador.");
+                return;
+            }
+
+            try {
+                const { error } = await dbClient.from('jogadores').insert({
+                    nome: nome,
+                    email: email,
+                    categoria: categoria,
+                    presenca: 'Sem Resposta',
+                    gols: 0,
+                    bola_cheia_acumulado: 0,
+                    bola_murcha_acumulado: 0,
+                    mensalidade_paga: false
+                });
+
+                if (error) throw error;
+
+                alert(`⚽ ${nome} cadastrado com sucesso no elenco!`);
+                inputNome.value = "";
+                inputEmail.value = "";
+                await carregarListaPresenca();
+            } catch (err) {
+                console.error(err);
+                alert("Erro ao cadastrar.");
+            }
+        });
+
+        // RESET MANUAL DO ADMIN
         document.getElementById('btn-admin-reset').addEventListener('click', async () => {
             if (!confirm("⚠️ Tem certeza que deseja limpar as presenças e convidados para iniciar a nova semana?")) return;
             try {
-                await dbClient.from('jogadores').update({ presenca: 'Sem Resposta' }).neq('presenca', 'Inexistente');
-                try { await dbClient.from('convidados').delete().neq('id', 0); } catch(e){}
+                await dbClient.from('jogadores').update({ presenca: 'Sem Resposta' }).neq('mensalidade_paga', 'Inexistente');
+                await dbClient.from('convidados').delete().neq('id', 0);
                 alert("✅ Lista limpa com sucesso!");
                 await carregarListaPresenca();
             } catch (err) { console.error(err); }
         });
 
-        // MECANISMO DE INCLUSÃO DE CONVIDADOS CORRIGIDO
+        // ADICIONAR CONVIDADO
         document.getElementById('btn-add-convidado').addEventListener('click', async () => {
             const input = document.getElementById('input-convidado');
             const nomeConvidado = input.value.trim();
             if (!nomeConvidado || !SampleLogado) return;
             try {
-                await dbClient.from('convidados').insert({ 
-                    nome: nomeConvidado, 
-                    jogador_id: SampleLogado.id 
-                });
+                await dbClient.from('convidados').insert({ nome: nomeConvidado, jogador_id: SampleLogado.id });
                 input.value = "";
                 await carregarListaPresenca();
-            } catch (err) { 
-                console.error("Erro insert convidado:", err); 
-                alert("Erro operacional: certifique-se de executar o comando SQL do Passo 1 no Supabase.");
-            }
+            } catch (err) { console.error(err); }
         });
 
-        // FORMULÁRIO E INFRAESTRUTURA DE LOGIN
+        document.getElementById('btn-vou').addEventListener('click', () => registrarPresenca('Confirmado'));
+        document.getElementById('btn-naovou').addEventListener('click', () => registrarPresenca('Dispensado'));
+
+        // FORMULÁRIO DE LOGIN
         document.getElementById('form-login').addEventListener('submit', async function(event) {
             event.preventDefault();
             const emailInput = document.getElementById('login-email').value.trim().toLowerCase();
@@ -455,14 +569,13 @@
                     btnEntrar.classList.remove('opacity-50');
                 }
             } catch (err) {
-                console.error("Erro fatal capturado no login:", err);
-                feedback.innerText = "Erro ao conectar. Rode o script do Passo 1 no Supabase.";
+                console.error(err);
                 btnEntrar.disabled = false;
                 btnEntrar.classList.remove('opacity-50');
             }
         });
 
-        // ROTEAMENTO DINÂMICO ENTRE ABAS
+        // NAVEGAÇÃO DE ABAS
         ['jogadores', 'financeiro', 'presenca', 'votacao'].forEach(aba => {
             const btn = document.getElementById(`btn-aba-${aba}`);
             if (btn) {
@@ -484,7 +597,7 @@
                                 if (aba === 'financeiro') renderizarFinanceiro(data);
                                 if (aba === 'presenca') await carregarListaPresenca();
                             }
-                        } catch (err) { console.error("Erro Sync Aba:", err); }
+                        } catch (err) { console.error(err); }
                     }
 
                     if (aba === 'jogadores') {
