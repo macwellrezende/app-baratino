@@ -83,15 +83,15 @@
         </section>
 
         <!-- ABA: PRESENÇA -->
-        <section id="aba-presenca" class="space-y-4">
+        <section id="aba-presenca" class="hidden space-y-4">
             <h2 class="text-xl font-bold border-b border-marinho-light pb-2">📋 Confirmar Presença</h2>
             
-            <!-- Botão de Reset Exclusivo do Admin (Escondido por padrão) -->
-            <button id="btn-admin-reset" class="hidden w-full bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 font-bold p-3 rounded-lg text-xs transition uppercase tracking-wider cursor-pointer">
+            <!-- Botão de Reset Exclusivo do Admin -->
+            <button id="btn-admin-reset" class="hidden w-full bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 font-bold p-3 rounded-lg text-xs transition uppercase tracking-wider cursor-pointer mb-2">
                 🧹 Limpar Lista da Semana (Admin)
             </button>
             
-            <p id="alerta-lista-fechada" class="hidden text-center text-xs bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 p-2.5 rounded-lg font-medium"></p>
+            <p id="alerta-lista-fechada" class="hidden text-center text-xs bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 p-2.5 rounded-lg font-medium mb-3"></p>
 
             <!-- Botões de Ação -->
             <div id="acoes-presenca" class="flex gap-3">
@@ -137,7 +137,6 @@
         const SUPABASE_URL = "https://menkdxhnzshtdkxsjeoe.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_499H1fxIAJ9bmcwksN9jZg_gRuPzwhQ";
         
-        // EMAIL CONFIGURADO COMO ADMINISTRADOR DO CLUBE
         const ADMIN_EMAIL = "macwellrezende@hotmail.com";
 
         const dbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -154,6 +153,7 @@
             if (diaSemana === 4) aberta = true; 
             if (diaSemana === 5 && hora < 22) aberta = true; 
 
+            // Para testes: force "return true;" caso esteja fora do horário e queira ver funcionando na hora
             return aberta;
         }
 
@@ -241,7 +241,7 @@
             `;
         }
 
-        // FUNÇÃO DE LISTA DE PRESENÇA TOTALMENTE REORDENADA E COM CONVIDADOS
+        // FUNÇÃO DE LISTA DE PRESENÇA CORRIGIDA
         async function carregarListaPresenca() {
             const container = document.getElementById('painel-lista-presenca');
             const btnVou = document.getElementById('btn-vou');
@@ -252,14 +252,12 @@
 
             const listaAberta = verificarJanelaLista();
 
-            // Exibe o botão de reset apenas se o e-mail logado for o do administrador
             if (jogadorLogado && jogadorLogado.email === ADMIN_EMAIL) {
                 btnResetAdmin.classList.remove('hidden');
             } else {
                 btnResetAdmin.classList.add('hidden');
             }
 
-            // Gerencia travas visuais conforme horário da janela
             if (!listaAberta) {
                 alertaFechada.classList.remove('hidden');
                 alertaFechada.innerText = "🔒 A lista abre quarta às 5h e encerra sexta às 22h.";
@@ -285,7 +283,7 @@
                 if (errJ || errC) throw errJ || errC;
 
                 const associadosConfirmados = jogadores.filter(j => j.presenca === 'Confirmado' && j.categoria !== 'Goleiro');
-                const goleirosConfirmados = gamblers = jogadores.filter(j => j.presenca === 'Confirmado' && j.categoria === 'Goleiro');
+                const goleirosConfirmados = jogadores.filter(j => j.presenca === 'Confirmado' && j.categoria === 'Goleiro');
                 const desfalques = jogadores.filter(j => j.presenca === 'Dispensado');
                 const semResposta = jogadores.filter(j => j.presenca === 'Sem Resposta' || !j.presenca);
 
@@ -375,19 +373,13 @@
 
         // COMANDO MANUAL DE RESET DO ADMINISTRAÇÃO
         document.getElementById('btn-admin-reset').addEventListener('click', async () => {
-            if (!confirm("⚠️ Tem certeza que deseja limpar as presenças e convidados para iniciar a nova semana? Esta ação não pode ser desfeita.")) return;
-            
+            if (!confirm("⚠️ Tem certeza que deseja limpar as presenças e convidados para iniciar a nova semana?")) return;
             try {
-                // Força o status de volta ao padrão
-                await dbClient.from('jogadores').update({ presenca: 'Sem Resposta' }).neq('id', '00000000-0000-0000-0000-000000000000');
-                // Deleta todos os convidados pendentes
+                await dbClient.from('jogadores').update({ presenca: 'Sem Resposta' }).neq('presenca', 'Inexistente');
                 await dbClient.from('convidados').delete().neq('id', 0);
                 alert("✅ Lista limpa com sucesso!");
                 await carregarListaPresenca();
-            } catch (err) {
-                console.error(err);
-                alert("Erro técnico ao realizar o reset.");
-            }
+            } catch (err) { console.error(err); }
         });
 
         // AÇÃO PARA ADICIONAR CONVIDADO
@@ -395,7 +387,6 @@
             const input = document.getElementById('input-convidado');
             const nome = input.value.trim();
             if (!nome || !jogadorLogado) return;
-
             try {
                 await dbClient.from('convidados').insert({ nome: nome, jogador_id: jogadorLogado.id });
                 input.value = "";
