@@ -4,6 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Baratino FC</title>
+
+    <!-- PWA: permite "Adicionar à Tela de Início" e abrir como app -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#07111E">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Baratino FC">
+    <link rel="apple-touch-icon" href="escudo.png">
+
     <!-- Tailwind CSS v4 -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <!-- Supabase JS -->
@@ -901,6 +911,49 @@
         btnNaoVouEl.addEventListener('click', withLoading(btnNaoVouEl, null, () => registrarPresenca('Dispensado')));
 
         // ============================================================
+        // TEMPO REAL — escuta mudanças no banco e atualiza a tela
+        // sozinha (sem precisar trocar de aba ou dar refresh), só
+        // quando a aba correspondente está visível na tela.
+        // ============================================================
+        let canalRealtime = null;
+
+        function abaVisivel(nome) {
+            const el = document.getElementById(`aba-${nome}`);
+            return !!(el && !el.classList.contains('hidden'));
+        }
+
+        async function handleRealtimeJogadores(payload) {
+            if (abaVisivel('jogadores')) await carregarJogadores();
+            if (abaVisivel('presenca')) await carregarListaPresenca();
+            if (abaVisivel('financeiro') && SampleLogado) {
+                const idAlterado = payload.new?.id ?? payload.old?.id;
+                if (idAlterado === SampleLogado.id) {
+                    const { data } = await dbClient.from('jogadores').select('*').eq('id', SampleLogado.id).single();
+                    if (data) { SampleLogado = data; renderizarFinanceiro(data); }
+                }
+            }
+        }
+
+        async function handleRealtimeConvidados() {
+            if (abaVisivel('presenca')) await carregarListaPresenca();
+        }
+
+        async function handleRealtimeVotacao() {
+            if (abaVisivel('votacao')) await carregarVotacao();
+        }
+
+        function iniciarRealtime() {
+            if (canalRealtime) return; // já está escutando, não duplica
+            canalRealtime = dbClient
+                .channel('baratino-realtime')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'jogadores' }, handleRealtimeJogadores)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'convidados' }, handleRealtimeConvidados)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'votacao_sessao' }, handleRealtimeVotacao)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'votos' }, handleRealtimeVotacao)
+                .subscribe();
+        }
+
+        // ============================================================
         // VOTAÇÃO DO BABA (bola cheia / bola murcha do dia)
         // ============================================================
         let sessaoVotacaoAtual = null;
@@ -1221,6 +1274,7 @@
             await carregarJogadores();
             renderizarFinanceiro(data);
             await carregarListaPresenca();
+            iniciarRealtime();
 
             document.getElementById('tela-login').classList.add('hidden');
             document.getElementById('tela-principal').classList.remove('hidden');
@@ -1428,9 +1482,20 @@
         });
 
         document.getElementById('btn-logout').addEventListener('click', async () => {
+            try { if (canalRealtime) await dbClient.removeChannel(canalRealtime); } catch (e) {}
             try { await dbClient.auth.signOut(); } catch (e) { /* segue o baile mesmo se falhar */ }
             location.reload();
         });
+
+        // Registro do Service Worker (parte técnica do PWA — permite
+        // instalar o app na tela inicial do celular).
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js').catch((err) => {
+                    console.error('Service Worker falhou ao registrar:', err);
+                });
+            });
+        }
     </script>
 </body>
 </html>
