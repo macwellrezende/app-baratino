@@ -1,0 +1,25 @@
+{
+  "name": "Baratino FC",
+  "short_name": "Baratino FC",
+  "description": "App de gestão do Baratino FC — artilharia, financeiro, presença e votação do baba.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#07111E",
+  "theme_color": "#07111E",
+  "icons": [
+    {
+      "src": "escudo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "escudo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
