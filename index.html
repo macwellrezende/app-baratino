@@ -1,1246 +1,1436 @@
 <!DOCTYPE html>
-
 <html lang="pt-BR">
-
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Baratino FC</title>
-
     <!-- Tailwind CSS v4 -->
-
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-
     <!-- Supabase JS -->
-
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
     <style>
-
         /* Customizações para o Azul Marinho Oficial */
-
         .bg-marinho-deep { background-color: #07111E; }
-
         .bg-marinho-card { background-color: #0E1E33; }
-
         .border-marinho-light { border-color: #1A314D; }
-
         .text-marinho-light { color: #94A3B8; }
 
+        /* Modal customizado (substitui alert()/confirm() nativos, que bloqueiam a thread principal e geram os erros de INP) */
+        #modal-overlay, #modal-editar-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 999; padding: 1.5rem; backdrop-filter: blur(2px);
+        }
+        #modal-overlay.hidden, #modal-editar-overlay.hidden { display: none; }
+        @keyframes modalIn { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .modal-box { animation: modalIn 0.15s ease-out; }
+        @keyframes toastIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .toast-item { animation: toastIn 0.2s ease-out; }
     </style>
-
 </head>
-
 <body class="bg-marinho-deep text-white font-sans min-h-screen flex flex-col max-w-md mx-auto shadow-2xl border-x border-marinho-light">
 
-
-
     <!-- HEADER DO APLICATIVO -->
-
     <header class="bg-marinho-card p-4 text-center border-b border-marinho-light sticky top-0 z-50 flex justify-between items-center">
-
         <div class="flex items-center space-x-2">
-
             <div class="w-7 h-7 rounded-full border-2 border-white flex items-center justify-center font-bold text-xs">B</div>
-
             <h1 class="text-lg font-black tracking-widest text-white">BARATINO FC</h1>
-
         </div>
-
         <button id="btn-logout" class="hidden text-xs bg-red-600/80 hover:bg-red-600 px-3 py-1.5 rounded font-medium transition">Sair</button>
-
     </header>
 
-
-
     <!-- TELA DE LOGIN -->
-
     <main id="tela-login" class="flex-1 flex flex-col justify-center p-8 space-y-8">
-
         <div class="text-center space-y-4">
-
             <!-- ESCUDO OFICIAL -->
-
             <div class="mx-auto w-36 h-36 bg-white rounded-full border-4 border-marinho-light flex items-center justify-center p-3 shadow-2xl overflow-hidden">
-
                 <img src="escudo.png" onerror="this.src='Fundo Branco - Brasão BFC.png'" alt="Escudo Baratino FC" class="w-full h-full object-contain">
-
             </div>
-
             <div class="space-y-1">
-
                 <h2 class="text-2xl font-bold tracking-tight">Área do Atleta</h2>
-
                 <p class="text-marinho-light text-sm">Digite seu e-mail para acessar o painel do clube.</p>
-
             </div>
-
         </div>
 
-
-
         <form id="form-login" class="space-y-4">
-
             <div>
-
                 <label class="block text-xs font-bold uppercase tracking-wider text-white/70 mb-1.5">E-mail Cadastrado</label>
-
-                <input type="email" id="login-email" required placeholder="seuemail@baba.com" 
-
+                <input type="email" id="login-email" required placeholder="seuemail@baba.com"
                     class="w-full bg-marinho-card border border-marinho-light rounded-lg p-3.5 text-white placeholder-gray-500 focus:outline-none focus:border-white transition">
-
             </div>
-
             <div id="login-feedback" class="hidden text-sm p-3 rounded-lg text-center font-medium"></div>
-
-            <button type="submit" id="btn-entrar" 
-
+            <button type="submit" id="btn-entrar"
                 class="w-full bg-white hover:bg-gray-100 text-gray-900 font-bold p-3.5 rounded-lg transition duration-200 shadow-md cursor-pointer">
-
                 Entrar no Aplicativo
-
             </button>
-
         </form>
 
+        <!-- LOGIN COM SENHA — só aparece para e-mails marcados como administrador -->
+        <div id="bloco-senha-admin" class="hidden space-y-4">
+            <div class="text-center space-y-1">
+                <p class="text-sm text-white font-bold">🛡️ Login de Administrador</p>
+                <p id="senha-admin-subtitulo" class="text-marinho-light text-xs leading-relaxed"></p>
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-white/70 mb-1.5">Senha</label>
+                <input type="password" id="input-senha-admin" autocomplete="current-password" placeholder="••••••••"
+                    class="w-full bg-marinho-card border border-marinho-light rounded-lg p-3.5 text-white placeholder-gray-500 focus:outline-none focus:border-white transition">
+            </div>
+            <div id="bloco-confirmar-senha" class="hidden">
+                <label class="block text-xs font-bold uppercase tracking-wider text-white/70 mb-1.5">Confirmar Senha</label>
+                <input type="password" id="input-confirmar-senha-admin" autocomplete="new-password" placeholder="••••••••"
+                    class="w-full bg-marinho-card border border-marinho-light rounded-lg p-3.5 text-white placeholder-gray-500 focus:outline-none focus:border-white transition">
+            </div>
+            <div id="senha-admin-feedback" class="hidden text-sm p-3 rounded-lg text-center font-medium"></div>
+            <button id="btn-entrar-senha-admin"
+                class="w-full bg-red-600 hover:bg-red-500 text-white font-bold p-3.5 rounded-lg transition duration-200 shadow-md cursor-pointer">
+                Entrar como Admin
+            </button>
+            <button id="btn-voltar-login" class="w-full bg-transparent text-marinho-light text-xs py-2 cursor-pointer hover:text-white transition">
+                ← Voltar
+            </button>
+        </div>
     </main>
 
-
-
     <!-- TELA PRINCIPAL DO APP -->
-
     <main id="tela-principal" class="hidden flex-1 p-5 space-y-6 overflow-y-auto mb-16">
 
-        
-
         <!-- ABA: ARTILHARIA E ELENCO -->
-
         <section id="aba-jogadores" class="space-y-4">
-
             <h2 class="text-xl font-bold border-b border-marinho-light pb-2">⚽ Artilharia & Elenco</h2>
-
             <div class="bg-marinho-card/40 border border-marinho-light/40 rounded-xl p-3 flex justify-around text-xs font-bold text-marinho-light tracking-wide">
-
                 <span class="flex items-center gap-1.5 text-yellow-400">⚽ Gols</span>
-
                 <span class="flex items-center gap-1.5 text-green-400">👍 Bola Cheia</span>
-
                 <span class="flex items-center gap-1.5 text-red-400">👎 Bola Murcha</span>
-
             </div>
-
             <div id="lista-jogadores" class="space-y-2">
-
                 <div class="bg-marinho-card border border-marinho-light rounded-xl p-6 text-center text-marinho-light text-sm">
-
                     Carregando dados dos atletas...
-
                 </div>
-
             </div>
-
         </section>
-
-
 
         <!-- ABA: FINANCEIRO INDIVIDUAL -->
-
         <section id="aba-financeiro" class="hidden space-y-4">
-
             <h2 class="text-xl font-bold border-b border-marinho-light pb-2">💰 Meu Financeiro</h2>
-
             <div id="painel-financeiro" class="space-y-3">
-
                 <div class="bg-marinho-card border border-marinho-light rounded-xl p-6 text-center text-marinho-light text-sm">
-
                     Carregando dados financeiros...
-
                 </div>
-
             </div>
-
         </section>
 
-
-
         <!-- ABA: PRESENÇA -->
-
         <section id="aba-presenca" class="hidden space-y-4">
-
             <h2 class="text-xl font-bold border-b border-marinho-light pb-2">📋 Confirmar Presença</h2>
 
-            
-
             <!-- CONTROLE EXCLUSIVO DO ADMIN (CADASTRO, RESET E INTERFERÊNCIA DE LISTA) -->
-
             <div id="painel-controle-admin" class="hidden bg-marinho-card border border-red-500/20 rounded-xl p-4 space-y-4 shadow-lg">
-
                 <p class="text-xs font-black text-red-400 uppercase tracking-widest">⚙️ Painel de Controle do Admin</p>
 
-                
-
-                <!-- NOVO: Gerenciar Lista de Terceiros (Confirmar por quem tá sem zap/net) -->
-
+                <!-- Gerenciar Lista de Terceiros (Confirmar por quem tá sem zap/net) -->
                 <div class="space-y-2 pt-1 border-t border-marinho-light/40">
-
                     <p class="text-[11px] font-bold text-white/80 uppercase">Interferência Manual na Lista</p>
-
                     <div class="flex flex-col gap-2">
-
                         <select id="admin-select-jogador" class="w-full bg-marinho-deep border border-marinho-light rounded-lg p-2 text-xs text-gray-200 focus:outline-none">
-
                             <option value="">Selecione um jogador...</option>
-
                         </select>
-
                         <div class="flex gap-2">
-
                             <button id="btn-admin-forcar-vou" class="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-2 rounded-lg text-xs transition cursor-pointer">Confirmar Presença</button>
-
                             <button id="btn-admin-forcar-naovou" class="flex-1 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 font-bold py-2 rounded-lg text-xs transition cursor-pointer">Lançar Desfalque</button>
-
                         </div>
-
                     </div>
-
                 </div>
-
-
 
                 <!-- Inclusão de novos jogadores no clube -->
-
                 <div class="space-y-2 pt-3 border-t border-marinho-light/40">
-
                     <p class="text-[11px] font-bold text-white/80 uppercase">Novo Atleta no Elenco</p>
-
                     <input type="text" id="admin-novo-nome" placeholder="Nome Completo" class="w-full bg-marinho-deep border border-marinho-light rounded-lg p-2 text-xs text-white">
-
                     <input type="email" id="admin-novo-email" placeholder="E-mail de acesso" class="w-full bg-marinho-deep border border-marinho-light rounded-lg p-2 text-xs text-white">
-
                     <div class="flex gap-2">
-
                         <select id="admin-nova-cat" class="flex-1 bg-marinho-deep border border-marinho-light rounded-lg p-2 text-xs text-gray-300">
-
                             <option value="Associado">Associado</option>
-
                             <option value="Goleiro">Goleiro</option>
-
                         </select>
-
                         <button id="btn-admin-add-jogador" class="bg-white text-gray-950 font-black px-4 rounded-lg text-xs cursor-pointer hover:bg-gray-100">Salvar</button>
-
                     </div>
-
                 </div>
-
-
 
                 <div class="pt-2 border-t border-marinho-light/40">
-
                     <button id="btn-admin-reset" class="w-full bg-red-600/10 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 font-bold p-2 rounded-lg text-[11px] transition uppercase tracking-wider cursor-pointer">
-
                         🧹 Limpar Lista da Semana
-
                     </button>
-
                 </div>
-
             </div>
-
-            
 
             <p id="alerta-lista-fechada" class="hidden text-center text-xs bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 p-2.5 rounded-lg font-medium mb-3"></p>
 
-
-
             <!-- Botões de Ação do Atleta Comum -->
-
             <div id="acoes-presenca" class="flex gap-3">
-
                 <button id="btn-vou" class="flex-1 bg-marinho-card border border-marinho-light text-white font-bold py-3.5 rounded-lg transition cursor-pointer">Vou Pro Jogo</button>
-
                 <button id="btn-naovou" class="flex-1 bg-marinho-card border border-marinho-light text-white font-bold py-3.5 rounded-lg transition cursor-pointer">Desfalque</button>
-
             </div>
-
-
 
             <!-- Painel para Adicionar Múltiplos Convidados -->
-
             <div id="bloco-convidado" class="bg-marinho-card border border-marinho-light rounded-xl p-3.5 space-y-2 hidden">
-
                 <p class="text-xs font-bold text-white/80 uppercase tracking-wider">➕ Levar Convidado (Linha)</p>
-
                 <div class="flex gap-2">
-
                     <input type="text" id="input-convidado" placeholder="Nome do convidado" class="flex-1 bg-marinho-deep border border-marinho-light rounded-lg p-2 text-sm text-white focus:outline-none focus:border-white">
-
                     <button id="btn-add-convidado" class="bg-white text-gray-950 px-4 py-2 rounded-lg text-xs font-black cursor-pointer hover:bg-gray-100">Incluir</button>
-
                 </div>
-
             </div>
-
-
 
             <!-- Listagem Dinâmica -->
-
             <div id="painel-lista-presenca" class="space-y-4 pt-2">
-
                 <div class="bg-marinho-card border border-marinho-light rounded-xl p-6 text-center text-marinho-light text-sm">
-
                     Carregando lista de presença...
-
                 </div>
-
             </div>
-
         </section>
-
-
 
         <!-- ABA: VOTAÇÃO -->
-
         <section id="aba-votacao" class="hidden space-y-4">
-
             <h2 class="text-xl font-bold border-b border-marinho-light pb-2">🔥 Votação do Baba</h2>
 
-            <div class="bg-marinho-card border border-marinho-light rounded-xl p-5 text-center">
-
-                <p class="text-sm text-marinho-light">A votação secreta estará disponível após o jogo.</p>
-
+            <!-- Controles do Admin -->
+            <div id="admin-votacao-controles" class="hidden bg-marinho-card border border-red-500/20 rounded-xl p-4 space-y-3">
+                <p class="text-xs font-black text-red-400 uppercase tracking-widest">⚙️ Controle da Votação</p>
+                <button id="btn-iniciar-votacao" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-2.5 rounded-lg text-sm transition cursor-pointer">▶️ Iniciar Votação (Bola Cheia / Bola Murcha)</button>
+                <button id="btn-encerrar-votacao" class="hidden w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-lg text-sm transition cursor-pointer">⏹️ Encerrar Votação</button>
             </div>
 
-        </section>
+            <!-- Painel de apuração/encerramento -->
+            <div id="painel-encerramento" class="hidden bg-marinho-card border border-yellow-500/30 rounded-xl p-4 space-y-4">
+                <p class="text-xs font-black text-yellow-400 uppercase tracking-widest">🧮 Apuração dos Votos</p>
+                <div id="apuracao-cheia" class="space-y-1.5"></div>
+                <div id="apuracao-murcha" class="space-y-1.5"></div>
+                <button id="btn-confirmar-encerramento" class="w-full bg-white text-gray-950 font-black py-2.5 rounded-lg text-sm cursor-pointer hover:bg-gray-100">Confirmar Encerramento</button>
+            </div>
 
+            <!-- Status de votação aberta + timer -->
+            <div id="votacao-status-aberta" class="hidden bg-green-500/10 border border-green-500/25 rounded-xl p-3 text-center">
+                <p class="text-xs text-green-300 font-bold uppercase tracking-wider">🟢 Votação Aberta</p>
+                <p class="text-[11px] text-green-200/80 mt-0.5">Tempo decorrido: <span id="votacao-timer">0:00</span></p>
+            </div>
+
+            <!-- Formulário de voto -->
+            <div id="votacao-form" class="hidden space-y-5">
+                <div class="space-y-2">
+                    <h3 class="text-sm font-bold text-green-400 uppercase tracking-wide">👍 Bola Cheia do Dia</h3>
+                    <div id="opcoes-cheia" class="grid grid-cols-2 gap-2"></div>
+                </div>
+                <div class="space-y-2">
+                    <h3 class="text-sm font-bold text-red-400 uppercase tracking-wide">👎 Bola Murcha do Dia</h3>
+                    <div id="opcoes-murcha" class="grid grid-cols-2 gap-2"></div>
+                </div>
+            </div>
+
+            <!-- Resultado da última votação -->
+            <div id="votacao-resultado" class="hidden bg-marinho-card border border-marinho-light rounded-xl p-4 space-y-3">
+                <p class="text-xs font-black text-white/70 uppercase tracking-widest">🏆 Resultado da Última Votação</p>
+                <div id="votacao-resultado-conteudo" class="space-y-2"></div>
+            </div>
+
+            <!-- Estado vazio -->
+            <div id="votacao-vazio" class="bg-marinho-card border border-marinho-light rounded-xl p-5 text-center">
+                <p class="text-sm text-marinho-light">A votação estará disponível quando o admin abrir, ao final do baba.</p>
+            </div>
+        </section>
     </main>
 
-
-
     <!-- NAVEGAÇÃO INFERIOR -->
-
     <nav id="menu-inferior" class="hidden bg-marinho-card border-t border-marinho-light fixed bottom-0 left-0 right-0 max-w-md mx-auto flex justify-around p-2 text-center text-[11px] text-marinho-light z-50">
-
         <button id="btn-aba-jogadores" class="flex-1 py-1.5 text-white font-bold">⚽<br>Artilharia</button>
-
         <button id="btn-aba-financeiro" class="flex-1 py-1.5 transition hover:text-white">💰<br>Finanças</button>
-
         <button id="btn-aba-presenca" class="flex-1 py-1.5 transition hover:text-white">📋<br>Presença</button>
-
         <button id="btn-aba-votacao" class="flex-1 py-1.5 transition hover:text-white">🔥<br>Votação</button>
-
     </nav>
 
+    <!-- MODAL CUSTOMIZADO (substitui alert()/confirm() nativos) -->
+    <div id="modal-overlay" class="hidden">
+        <div class="modal-box bg-marinho-card border border-marinho-light rounded-xl p-5 max-w-sm w-full space-y-4 shadow-2xl">
+            <p id="modal-mensagem" class="text-sm text-white leading-relaxed"></p>
+            <div id="modal-botoes" class="flex gap-2 justify-end"></div>
+        </div>
+    </div>
 
+    <!-- MODAL DE EDIÇÃO DE ATLETA (exclusivo do admin) -->
+    <div id="modal-editar-overlay" class="hidden">
+        <div class="modal-box bg-marinho-card border border-marinho-light rounded-2xl w-full max-w-sm max-h-[85vh] overflow-y-auto p-5 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center">
+                <h3 class="text-base font-bold">✏️ Editar Atleta</h3>
+                <button id="btn-fechar-edicao" class="text-marinho-light hover:text-white text-xl leading-none cursor-pointer">×</button>
+            </div>
+            <input type="hidden" id="edit-id">
+            <div>
+                <label class="block text-[11px] font-bold uppercase text-white/70 mb-1">Nome</label>
+                <input type="text" id="edit-nome" class="w-full bg-marinho-deep border border-marinho-light rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-white">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-[11px] font-bold uppercase text-white/70 mb-1">Categoria</label>
+                    <select id="edit-categoria" class="w-full bg-marinho-deep border border-marinho-light rounded-lg p-2.5 text-sm text-gray-200">
+                        <option value="Associado">Associado</option>
+                        <option value="Goleiro">Goleiro</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold uppercase text-white/70 mb-1">Gols ⚽</label>
+                    <input type="number" id="edit-gols" min="0" class="w-full bg-marinho-deep border border-marinho-light rounded-lg p-2.5 text-sm text-white">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-[11px] font-bold uppercase text-white/70 mb-1">👍 Bola Cheia</label>
+                    <input type="number" id="edit-bolacheia" min="0" class="w-full bg-marinho-deep border border-marinho-light rounded-lg p-2.5 text-sm text-white">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold uppercase text-white/70 mb-1">👎 Bola Murcha</label>
+                    <input type="number" id="edit-bolamurcha" min="0" class="w-full bg-marinho-deep border border-marinho-light rounded-lg p-2.5 text-sm text-white">
+                </div>
+            </div>
+            <div class="pt-2 border-t border-marinho-light/40 space-y-2">
+                <p class="text-[11px] font-bold text-white/70 uppercase">Financeiro</p>
+                <label class="flex items-center gap-2 text-sm text-white">
+                    <input type="checkbox" id="edit-mensalidade-paga" class="w-4 h-4 accent-green-500">
+                    Mensalidade do mês paga
+                </label>
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-white/60 mb-1">Valor Mens. (R$)</label>
+                        <input type="number" id="edit-valor-mensalidade" step="0.01" min="0" class="w-full bg-marinho-deep border border-marinho-light rounded-lg p-2 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-white/60 mb-1">Cartões (R$)</label>
+                        <input type="number" id="edit-cartoes" step="0.01" min="0" class="w-full bg-marinho-deep border border-marinho-light rounded-lg p-2 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-white/60 mb-1">Multas (R$)</label>
+                        <input type="number" id="edit-multas" step="0.01" min="0" class="w-full bg-marinho-deep border border-marinho-light rounded-lg p-2 text-xs text-white">
+                    </div>
+                </div>
+            </div>
+            <div class="pt-2 border-t border-marinho-light/40">
+                <label class="flex items-center gap-2 text-sm text-white">
+                    <input type="checkbox" id="edit-is-admin" class="w-4 h-4 accent-red-500">
+                    🛡️ Tornar administrador do app
+                </label>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button id="btn-cancelar-edicao" class="flex-1 bg-marinho-deep border border-marinho-light text-white font-bold py-2.5 rounded-lg text-sm cursor-pointer hover:bg-white/5">Cancelar</button>
+                <button id="btn-salvar-edicao" class="flex-1 bg-white text-gray-950 font-black py-2.5 rounded-lg text-sm cursor-pointer hover:bg-gray-100">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOASTS (feedback rápido de erro/sucesso sem bloquear a tela) -->
+    <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-[1000] w-full max-w-md px-4 space-y-2 pointer-events-none"></div>
 
     <script>
-
         const SUPABASE_URL = "https://menkdxhnzshtdkxsjeoe.supabase.co";
-
         const SUPABASE_ANON_KEY = "sb_publishable_499H1fxIAJ9bmcwksN9jZg_gRuPzwhQ";
 
-        
-
+        // Fallback de bootstrap: continua funcionando mesmo antes de você rodar a
+        // migração SQL que cria a coluna is_admin. Depois de rodar a migração,
+        // ehAdmin() passa a valer principalmente pelo campo is_admin do banco,
+        // permitindo múltiplos administradores.
         const ADMIN_EMAIL = "macwellrezende@gmail.com";
 
-
-
         const dbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
         let SampleLogado = null;
 
-
-
-        // VALIDAÇÃO OPERACIONAL DO FUSO HORÁRIO
-
-        function verificarJanelaLista() {
-
-            const dataBrasilia = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Bahia"}));
-
-            const diaSemana = dataBrasilia.getDay(); 
-
-            const hora = dataBrasilia.getHours();
-
-
-
-            let aberta = false;
-
-            if (diaSemana === 3 && hora >= 5) aberta = true; 
-
-            if (diaSemana === 4) aberta = true; 
-
-            if (diaSemana === 5 && hora < 22) aberta = true; 
-
-
-
-            return aberta;
-
+        function ehAdmin() {
+            return !!(SampleLogado && (SampleLogado.is_admin === true || SampleLogado.email === ADMIN_EMAIL));
         }
 
+        // ============================================================
+        // SISTEMA DE MODAL/TOAST NÃO-BLOQUEANTE
+        // Substitui alert()/confirm() nativos, que travam a thread
+        // principal enquanto o usuário não responde ao popup — essa
+        // era a causa real do "INP Issue" no botão de reset.
+        // ============================================================
+        function showToast(mensagem, tipo = 'info') {
+            const container = document.getElementById('toast-container');
+            const cores = {
+                erro: 'bg-red-900/90 border-red-500/40 text-red-100',
+                sucesso: 'bg-green-900/90 border-green-500/40 text-green-100',
+                info: 'bg-marinho-card border-marinho-light text-white'
+            };
+            const item = document.createElement('div');
+            item.className = `toast-item pointer-events-auto border rounded-lg p-3 text-sm font-medium shadow-xl ${cores[tipo] || cores.info}`;
+            item.innerText = mensagem;
+            container.appendChild(item);
+            setTimeout(() => {
+                item.style.transition = 'opacity 0.3s';
+                item.style.opacity = '0';
+                setTimeout(() => item.remove(), 300);
+            }, 3200);
+        }
 
+        function showAlert(mensagem) {
+            return new Promise((resolve) => {
+                const overlay = document.getElementById('modal-overlay');
+                const msgEl = document.getElementById('modal-mensagem');
+                const botoesEl = document.getElementById('modal-botoes');
+                msgEl.innerText = mensagem;
+                botoesEl.innerHTML = '';
+                const btnOk = document.createElement('button');
+                btnOk.className = 'bg-white text-gray-950 font-bold px-4 py-2 rounded-lg text-sm cursor-pointer hover:bg-gray-100';
+                btnOk.innerText = 'OK';
+                btnOk.onclick = () => { overlay.classList.add('hidden'); resolve(true); };
+                botoesEl.appendChild(btnOk);
+                overlay.classList.remove('hidden');
+            });
+        }
+
+        function showConfirm(mensagem) {
+            return new Promise((resolve) => {
+                const overlay = document.getElementById('modal-overlay');
+                const msgEl = document.getElementById('modal-mensagem');
+                const botoesEl = document.getElementById('modal-botoes');
+                msgEl.innerText = mensagem;
+                botoesEl.innerHTML = '';
+
+                const btnCancelar = document.createElement('button');
+                btnCancelar.className = 'bg-marinho-deep border border-marinho-light text-white font-bold px-4 py-2 rounded-lg text-sm cursor-pointer hover:bg-white/5';
+                btnCancelar.innerText = 'Cancelar';
+                btnCancelar.onclick = () => { overlay.classList.add('hidden'); resolve(false); };
+
+                const btnConfirmar = document.createElement('button');
+                btnConfirmar.className = 'bg-red-600 hover:bg-red-500 text-white font-bold px-4 py-2 rounded-lg text-sm cursor-pointer';
+                btnConfirmar.innerText = 'Confirmar';
+                btnConfirmar.onclick = () => { overlay.classList.add('hidden'); resolve(true); };
+
+                botoesEl.appendChild(btnCancelar);
+                botoesEl.appendChild(btnConfirmar);
+                overlay.classList.remove('hidden');
+            });
+        }
+
+        // Trava simples pra impedir duplo-clique disparar a mesma ação duas vezes
+        function withLoading(botao, textoCarregando, fn) {
+            return async (...args) => {
+                if (botao.dataset.loading === '1') return;
+                const textoOriginal = botao.innerHTML;
+                botao.dataset.loading = '1';
+                botao.disabled = true;
+                botao.classList.add('opacity-60', 'cursor-wait');
+                if (textoCarregando) botao.innerText = textoCarregando;
+                try {
+                    await fn(...args);
+                } finally {
+                    botao.dataset.loading = '0';
+                    botao.disabled = false;
+                    botao.classList.remove('opacity-60', 'cursor-wait');
+                    botao.innerHTML = textoOriginal;
+                }
+            };
+        }
+
+        // VALIDAÇÃO OPERACIONAL DO FUSO HORÁRIO
+        function verificarJanelaLista() {
+            const dataBrasilia = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Bahia"}));
+            const diaSemana = dataBrasilia.getDay();
+            const hora = dataBrasilia.getHours();
+
+            let aberta = false;
+            if (diaSemana === 3 && hora >= 5) aberta = true;
+            if (diaSemana === 4) aberta = true;
+            if (diaSemana === 5 && hora < 22) aberta = true;
+
+            return aberta;
+        }
 
         // CARREGA ELENCO COMPLETO NA ARTILHARIA
-
         async function carregarJogadores() {
-
             const listaDiv = document.getElementById('lista-jogadores');
-
             try {
-
                 const { data, error } = await dbClient
-
                     .from('jogadores')
-
                     .select('*')
-
                     .order('gols', { ascending: false })
-
                     .order('nome', { ascending: true });
-
-
 
                 if (error) throw error;
 
-
-
                 if (data && data.length > 0) {
-
                     listaDiv.innerHTML = "";
-
                     data.forEach(jog => {
-
                         const categoriaFormatada = jog.categoria === 'Mensalista' ? 'Associado' : jog.categoria;
-
                         const card = document.createElement('div');
-
                         card.className = "bg-marinho-card border border-marinho-light rounded-xl p-4 flex flex-col space-y-3 shadow-md";
-
                         card.innerHTML = `
-
                             <div class="flex justify-between items-center">
-
-                                <div>
-
-                                    <p class="font-bold text-white text-base tracking-wide">${jog.nome}</p>
-
-                                    <p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider mt-0.5">${categoriaFormatada}</p>
-
-                                </div>
-
-                                <div class="bg-yellow-500/10 border border-yellow-500/30 px-3 py-1.5 rounded-lg flex items-center space-x-2 min-w-[75px] justify-center">
-
-                                    <span class="text-base">⚽</span>
-
-                                    <div class="text-center">
-
-                                        <p class="text-[14px] font-black text-yellow-400 leading-tight">${jog.gols || 0}</p>
-
+                                <div class="flex items-center gap-1.5">
+                                    <div>
+                                        <p class="font-bold text-white text-base tracking-wide">${jog.nome}${jog.is_admin ? ' <span class="text-[9px] text-red-400 font-black align-middle">🛡️ ADMIN</span>' : ''}</p>
+                                        <p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider mt-0.5">${categoriaFormatada}</p>
                                     </div>
-
                                 </div>
-
+                                <div class="flex items-center gap-1.5">
+                                    ${ehAdmin() ? `<button onclick="abrirEdicaoJogador(${jog.id})" title="Editar atleta" class="text-marinho-light hover:text-white transition p-1.5 rounded-lg hover:bg-white/5 cursor-pointer">✏️</button>` : ''}
+                                    <div class="bg-yellow-500/10 border border-yellow-500/30 px-3 py-1.5 rounded-lg flex items-center space-x-2 min-w-[75px] justify-center">
+                                        <span class="text-base">⚽</span>
+                                        <div class="text-center">
+                                            <p class="text-[14px] font-black text-yellow-400 leading-tight">${jog.gols || 0}</p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-
                             <div class="flex gap-2 text-xs font-semibold pt-2 border-t border-marinho-light/40">
-
                                 <span class="bg-green-500/5 text-green-400 border border-green-500/15 px-2.5 py-1 rounded flex items-center gap-1.5">👍 ${jog.bola_cheia_acumulado || 0}</span>
-
                                 <span class="bg-red-500/5 text-red-400 border border-red-500/15 px-2.5 py-1 rounded flex items-center gap-1.5">👎 ${jog.bola_murcha_acumulado || 0}</span>
-
                             </div>
-
                         `;
-
                         listaDiv.appendChild(card);
-
                     });
-
+                } else {
+                    listaDiv.innerHTML = `<div class="bg-marinho-card border border-marinho-light rounded-xl p-6 text-center text-marinho-light text-sm">Nenhum atleta cadastrado ainda.</div>`;
                 }
-
-            } catch (err) { console.error("Erro Elenco:", err); }
-
+            } catch (err) {
+                console.error("Erro Elenco:", err);
+                listaDiv.innerHTML = `<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-4 text-center text-red-300 text-sm">Não foi possível carregar o elenco. Puxe a tela pra baixo pra tentar de novo.</div>`;
+                showToast("Erro ao carregar a artilharia.", "erro");
+            }
         }
 
+        // ============================================================
+        // EDIÇÃO DE ATLETA PELO ADMIN (gols, cartões, mensalidade, admin)
+        // ============================================================
+        async function abrirEdicaoJogador(id) {
+            if (!ehAdmin()) return;
+            try {
+                const { data, error } = await dbClient.from('jogadores').select('*').eq('id', id).single();
+                if (error) throw error;
 
+                document.getElementById('edit-id').value = data.id;
+                document.getElementById('edit-nome').value = data.nome || '';
+                document.getElementById('edit-categoria').value = (data.categoria === 'Mensalista' ? 'Associado' : data.categoria) || 'Associado';
+                document.getElementById('edit-gols').value = data.gols || 0;
+                document.getElementById('edit-bolacheia').value = data.bola_cheia_acumulado || 0;
+                document.getElementById('edit-bolamurcha').value = data.bola_murcha_acumulado || 0;
+                document.getElementById('edit-mensalidade-paga').checked = !!data.mensalidade_paga;
+                document.getElementById('edit-valor-mensalidade').value = data.valor_mensalidade ?? '';
+                document.getElementById('edit-cartoes').value = data.cartoes_pendentes || 0;
+                document.getElementById('edit-multas').value = data.multas_pendentes || 0;
+                document.getElementById('edit-is-admin').checked = !!data.is_admin;
+
+                document.getElementById('modal-editar-overlay').classList.remove('hidden');
+            } catch (err) {
+                console.error(err);
+                showToast("Erro ao carregar dados do atleta.", "erro");
+            }
+        }
+
+        function fecharEdicaoJogador() {
+            document.getElementById('modal-editar-overlay').classList.add('hidden');
+        }
+
+        document.getElementById('btn-fechar-edicao').addEventListener('click', fecharEdicaoJogador);
+        document.getElementById('btn-cancelar-edicao').addEventListener('click', fecharEdicaoJogador);
+
+        const btnSalvarEdicao = document.getElementById('btn-salvar-edicao');
+        btnSalvarEdicao.addEventListener('click', withLoading(btnSalvarEdicao, 'Salvando...', async () => {
+            const id = document.getElementById('edit-id').value;
+            if (!id) return;
+
+            const nome = document.getElementById('edit-nome').value.trim();
+            if (!nome) { await showAlert("O nome não pode ficar em branco."); return; }
+
+            const valorMensalRaw = document.getElementById('edit-valor-mensalidade').value;
+
+            const payload = {
+                nome: nome,
+                categoria: document.getElementById('edit-categoria').value,
+                gols: Number(document.getElementById('edit-gols').value) || 0,
+                bola_cheia_acumulado: Number(document.getElementById('edit-bolacheia').value) || 0,
+                bola_murcha_acumulado: Number(document.getElementById('edit-bolamurcha').value) || 0,
+                mensalidade_paga: document.getElementById('edit-mensalidade-paga').checked,
+                valor_mensalidade: valorMensalRaw ? Number(valorMensalRaw) : null,
+                cartoes_pendentes: Number(document.getElementById('edit-cartoes').value) || 0,
+                multas_pendentes: Number(document.getElementById('edit-multas').value) || 0,
+                is_admin: document.getElementById('edit-is-admin').checked
+            };
+
+            try {
+                const { error } = await dbClient.from('jogadores').update(payload).eq('id', id);
+                if (error) throw error;
+
+                showToast("✅ Atleta atualizado!", "sucesso");
+                fecharEdicaoJogador();
+                await carregarJogadores();
+
+                if (SampleLogado && String(SampleLogado.id) === String(id)) {
+                    const { data } = await dbClient.from('jogadores').select('*').eq('id', id).single();
+                    if (data) { SampleLogado = data; renderizarFinanceiro(data); }
+                }
+            } catch (err) {
+                console.error(err);
+                showToast("Erro ao salvar. Verifique os dados e tente de novo.", "erro");
+            }
+        }));
 
         // MODELAGEM DO EXTRATO FINANCEIRO INDIVIDUAL
-
         function renderizarFinanceiro(jog) {
-
             const container = document.getElementById('painel-financeiro');
-
             const mesesAno = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-
             const dataAtual = new Date();
-
             const mesAtualNome = mesesAno[dataAtual.getMonth()];
-
             const anoAtual = dataAtual.getFullYear();
 
-            
-
             let valorMensal = 45.00;
-
             if (dataAtual.getMonth() === 6 || dataAtual.getMonth() === 7) valorMensal = 55.00;
-
             if (jog.valor_mensalidade !== null && jog.valor_mensalidade !== undefined && jog.valor_mensalidade > 0) valorMensal = Number(jog.valor_mensalidade);
 
-
-
-            const statusMensalidade = jog.mensalidade_paga 
-
+            const statusMensalidade = jog.mensalidade_paga
                 ? `<span class="bg-green-500/10 text-green-400 border border-green-500/20 px-3 py-1 rounded-full text-xs font-bold">🟢 PAGO</span>`
-
                 : `<span class="bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full text-xs font-bold">🔴 PENDENTE (R$ ${valorMensal.toFixed(2)})</span>`;
 
-
-
             const vCartoes = jog.cartoes_pendentes || 0;
-
             const statusCartoes = vCartoes > 0
-
                 ? `<span class="bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full text-xs font-bold">🔴 PENDENTE (R$ ${vCartoes.toFixed(2)})</span>`
-
                 : `<span class="bg-white/5 text-gray-400 border border-white/10 px-3 py-1 rounded-full text-xs font-medium">🟢 Sem Débitos</span>`;
-
-
 
             const vMultas = jog.multas_pendentes || 0;
-
             const statusMultas = vMultas > 0
-
                 ? `<span class="bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full text-xs font-bold">🔴 PENDENTE (R$ ${vMultas.toFixed(2)})</span>`
-
                 : `<span class="bg-white/5 text-gray-400 border border-white/10 px-3 py-1 rounded-full text-xs font-medium">🟢 Sem Débitos</span>`;
 
-
-
             container.innerHTML = `
-
                 <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 flex justify-between items-center shadow-sm">
-
                     <div><p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider">Mensalidade</p><p class="text-base font-bold text-white mt-0.5">${mesAtualNome} / ${anoAtual}</p></div>
-
                     <div>${statusMensalidade}</div>
-
                 </div>
-
                 <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 flex justify-between items-center shadow-sm">
-
                     <div><p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider">Pendência de Cartões</p><p class="text-base font-bold text-white mt-0.5">Acumulado das Rodadas</p></div>
-
                     <div>${statusCartoes}</div>
-
                 </div>
-
                 <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 flex justify-between items-center shadow-sm">
-
                     <div><p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider">Multas Administrativas</p><p class="text-base font-bold text-white mt-0.5">Nome na lista e ausência no jogo</p></div>
-
                     <div>${statusMultas}</div>
-
                 </div>
-
             `;
-
         }
 
-
-
         // SISTEMA INTEGRADO DE PRESENÇAS E CONVIDADOS
-
         async function carregarListaPresenca() {
-
             const container = document.getElementById('painel-lista-presenca');
-
             const btnVou = document.getElementById('btn-vou');
-
             const btnNaoVou = document.getElementById('btn-naovou');
-
             const blocoConvidado = document.getElementById('bloco-convidado');
-
             const alertaFechada = document.getElementById('alerta-lista-fechada');
-
             const painelAdmin = document.getElementById('painel-controle-admin');
-
             const selectJogadorAdmin = document.getElementById('admin-select-jogador');
-
-
 
             const listaAberta = verificarJanelaLista();
 
-
-
-            // Ativa visualização estrutural do Admin e alimenta o seletor de elenco
-
-            if (SampleLogado && SampleLogado.email === ADMIN_EMAIL) {
-
+            if (ehAdmin()) {
                 painelAdmin.classList.remove('hidden');
-
             } else {
-
                 painelAdmin.classList.add('hidden');
-
             }
-
-
 
             if (!listaAberta) {
-
                 alertaFechada.classList.remove('hidden');
-
                 alertaFechada.innerText = "🔒 A lista abre quarta às 5h e encerra sexta às 22h.";
-
                 btnVou.disabled = true; btnNaoVou.disabled = true;
-
                 btnVou.classList.add('opacity-30'); btnNaoVou.classList.add('opacity-30');
-
                 blocoConvidado.classList.add('hidden');
-
             } else {
-
                 alertaFechada.classList.add('hidden');
-
                 btnVou.disabled = false; btnNaoVou.disabled = false;
-
                 btnVou.classList.remove('opacity-30'); btnNaoVou.classList.remove('opacity-30');
-
             }
 
-
-
             try {
-
                 const { data: jogadores, error: errJ } = await dbClient
-
                     .from('jogadores')
-
                     .select('id, nome, presenca, categoria')
-
                     .order('nome', { ascending: true });
 
-
-
                 const { data: convidados, error: errC } = await dbClient
-
                     .from('convidados')
-
                     .select('id, nome, j_id:jogador_id, jogadores(nome)');
-
-
 
                 if (errJ || errC) throw errJ || errC;
 
-
-
-                // ATUALIZA O SELETOR DO ADMIN EM TEMPO REAL
-
-                if (SampleLogado && SampleLogado.email === ADMIN_EMAIL && jogadores) {
-
+                if (ehAdmin() && jogadores) {
                     const valorSelecionadoAntes = selectJogadorAdmin.value;
-
                     selectJogadorAdmin.innerHTML = '<option value="">Selecione um jogador...</option>';
-
                     jogadores.forEach(j => {
-
                         const statusAtualText = j.presenca === 'Confirmado' ? ' (Confirmado)' : (j.presenca === 'Dispensado' ? ' (Desfalque)' : ' (Sem Resposta)');
-
                         selectJogadorAdmin.innerHTML += `<option value="${j.id}">${j.nome}${statusAtualText}</option>`;
-
                     });
-
                     selectJogadorAdmin.value = valorSelecionadoAntes;
-
                 }
-
-
 
                 const associadosConfirmados = jogadores.filter(j => j.presenca === 'Confirmado' && j.categoria !== 'Goleiro');
-
                 const goleirosConfirmados = jogadores.filter(j => j.presenca === 'Confirmado' && j.categoria === 'Goleiro');
-
                 const desfalques = jogadores.filter(j => j.presenca === 'Dispensado');
-
                 const semResposta = jogadores.filter(j => j.presenca !== 'Confirmado' && j.presenca !== 'Dispensado');
 
-
-
                 if (SampleLogado) {
-
                     const mt = jogadores.find(j => j.id === SampleLogado.id);
-
                     if (mt) {
-
                         SampleLogado.presenca = mt.presenca;
-
                         btnVou.className = "flex-1 font-bold py-3.5 rounded-lg transition border text-center cursor-pointer";
-
                         btnNaoVou.className = "flex-1 font-bold py-3.5 rounded-lg transition border text-center cursor-pointer";
 
-
-
                         if (SampleLogado.presenca === 'Confirmado') {
-
                             btnVou.classList.add('bg-green-600', 'text-white', 'border-green-500');
-
                             btnNaoVou.classList.add('bg-marinho-card', 'text-gray-400', 'border-marinho-light');
-
-                            if (listaAberta) blocoConvidado.classList.remove('hidden'); 
-
+                            if (listaAberta) blocoConvidado.classList.remove('hidden');
                         } else if (SampleLogado.presenca === 'Dispensado') {
-
                             btnVou.classList.add('bg-marinho-card', 'text-gray-400', 'border-marinho-light');
-
                             btnNaoVou.classList.add('bg-red-600', 'text-white', 'border-red-500');
-
                             blocoConvidado.classList.add('hidden');
-
                         } else {
-
                             btnVou.classList.add('bg-marinho-card', 'text-white', 'border-marinho-light');
-
                             btnNaoVou.classList.add('bg-marinho-card', 'text-white', 'border-marinho-light');
-
                             blocoConvidado.classList.add('hidden');
-
                         }
-
                     }
-
                 }
-
-
 
                 let blocoConvidadosHTML = "";
-
                 if (convidados && convidados.length > 0) {
-
                     const itens = convidados.map(c => {
-
-                        const donoOuAdmin = (SampleLogado && (c.j_id == SampleLogado.id || SampleLogado.email === ADMIN_EMAIL));
-
-                        const botaoExcluir = donoOuAdmin 
-
-                            ? `<button onclick="removerConvidado(${c.id})" class="text-red-500 hover:text-red-400 ml-1.5 p-0.5 font-bold cursor-pointer transition text-xs">❌</button>` 
-
+                        const donoOuAdmin = (SampleLogado && (c.j_id == SampleLogado.id || ehAdmin()));
+                        const botaoExcluir = donoOuAdmin
+                            ? `<button onclick="removerConvidado(${c.id})" class="text-red-500 hover:text-red-400 ml-1.5 p-0.5 font-bold cursor-pointer transition text-xs">❌</button>`
                             : '';
-
                         return `<span class="inline-flex items-center bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg text-gray-200 font-medium text-xs">${c.nome} <span class="text-[10px] text-marinho-light font-normal ml-1">(${c.jogadores?.nome || 'Atleta'})</span>${botaoExcluir}</span>`;
-
                     }).join(' ');
 
-
-
                     blocoConvidadosHTML = `
-
                         <div class="pt-2 border-t border-marinho-light/30">
-
                             <p class="text-xs font-bold text-yellow-400 uppercase tracking-tight mb-2">Convidados de Linha:</p>
-
                             <div class="flex flex-wrap gap-1.5">${itens}</div>
-
                         </div>
-
                     `;
-
                 }
-
-
 
                 const totalLinha = associadosConfirmados.length + convidados.length;
 
-
-
                 container.innerHTML = `
-
                     <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 space-y-3">
-
                         <div class="flex justify-between items-center border-b border-marinho-light pb-2">
-
                             <p class="text-xs font-bold uppercase tracking-wider text-green-400">🏃 Jogadores de Linha Confirmados</p>
-
                             <span class="bg-green-500/10 text-green-400 text-xs px-2 py-0.5 rounded-full font-black">${totalLinha}</span>
-
                         </div>
-
                         <p class="text-sm text-white font-semibold leading-relaxed">
-
                             ${associadosConfirmados.map(j => j.nome).join(', ') || '<span class="text-xs text-marinho-light italic">Nenhum associado confirmado.</span>'}
-
                         </p>
-
                         ${blocoConvidadosHTML}
-
                     </div>
 
-
-
                     <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 space-y-2">
-
                         <div class="flex justify-between items-center border-b border-marinho-light pb-1.5 mb-2">
-
                             <p class="text-xs font-bold uppercase tracking-wider text-cyan-400">🧤 Goleiros Confirmados</p>
-
                             <span class="bg-cyan-500/10 text-cyan-400 text-xs px-2 py-0.5 rounded-full font-black">${goleirosConfirmados.length}</span>
-
                         </div>
-
                         <p class="text-sm text-cyan-100 font-bold leading-relaxed">
-
                             ${goleirosConfirmados.map(j => j.nome).join(', ') || '<span class="text-xs text-marinho-light italic">Nenhum goleiro confirmado.</span>'}
-
                         </p>
-
                     </div>
 
-
-
                     <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 space-y-2">
-
                         <div class="flex justify-between items-center border-b border-marinho-light pb-1.5 mb-2">
-
                             <p class="text-xs font-bold uppercase tracking-wider text-red-400">❌ Desfalques</p>
-
                             <span class="bg-red-500/10 text-red-400 text-xs px-2 py-0.5 rounded-full font-black">${desfalques.length}</span>
-
                         </div>
-
                         <p class="text-sm text-marinho-light/80 leading-relaxed">
-
                             ${desfalques.map(j => j.nome).join(', ') || '<span class="text-xs text-marinho-light italic">Nenhum desfalque.</span>'}
-
                         </p>
-
                     </div>
-
-
 
                     <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 space-y-2">
-
                         <div class="flex justify-between items-center border-b border-marinho-light pb-1.5 mb-2">
-
                             <p class="text-xs font-bold uppercase tracking-wider text-gray-400">⏳ No Baratino (Sem Resposta)</p>
-
                             <span class="bg-white/5 text-gray-400 text-xs px-2 py-0.5 rounded-full font-black">${semResposta.length}</span>
-
                         </div>
-
                         <p class="text-xs text-marinho-light/60 leading-relaxed">
-
                             ${semResposta.map(j => j.nome).join(', ') || '<span class="text-xs text-green-400/60 italic">Elenco completo respondeu!</span>'}
-
                         </p>
-
                     </div>
-
                 `;
-
-            } catch (err) { console.error(err); }
-
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = `<div class="bg-red-900/20 border border-red-500/30 rounded-xl p-4 text-center text-red-300 text-sm">Não foi possível carregar a lista de presença.</div>`;
+                showToast("Erro ao carregar a lista de presença.", "erro");
+            }
         }
-
-
 
         async function registrarPresenca(status) {
-
             if (!SampleLogado) return;
-
             try {
-
-                await dbClient.from('jogadores').update({ presenca: status }).eq('id', SampleLogado.id);
-
-                if (status === 'Dispensado') await dbClient.from('convidados').delete().eq('jogador_id', SampleLogado.id);
-
+                const { error } = await dbClient.from('jogadores').update({ presenca: status }).eq('id', SampleLogado.id);
+                if (error) throw error;
+                if (status === 'Dispensado') {
+                    const { error: errDel } = await dbClient.from('convidados').delete().eq('jogador_id', SampleLogado.id);
+                    if (errDel) throw errDel;
+                }
                 await carregarListaPresenca();
-
-            } catch (err) { console.error(err); }
-
+            } catch (err) {
+                console.error(err);
+                showToast("Erro ao registrar sua presença. Tenta de novo.", "erro");
+            }
         }
-
-
 
         async function removerConvidado(idConvidado) {
-
-            if (!confirm("Deseja realmente cancelar este convidado?")) return;
-
+            const confirmou = await showConfirm("Deseja realmente cancelar este convidado?");
+            if (!confirmou) return;
             try {
-
-                await dbClient.from('convidados').delete().eq('id', idConvidado);
-
+                const { error } = await dbClient.from('convidados').delete().eq('id', idConvidado);
+                if (error) throw error;
                 await carregarListaPresenca();
-
-            } catch (err) { console.error(err); }
-
+                showToast("Convidado removido.", "sucesso");
+            } catch (err) {
+                console.error(err);
+                showToast("Erro ao remover convidado.", "erro");
+            }
         }
-
-
 
         // COMANDO EXCLUSIVO DO ADMIN: FORÇAR MUDANÇA EM ATLETA DO ELENCO
-
         async function forcarStatusJogadorAdmin(status) {
-
             const selectJogadorAdmin = document.getElementById('admin-select-jogador');
-
             const idJogador = selectJogadorAdmin.value;
-
             if (!idJogador) {
-
-                alert("Selecione um jogador do elenco para fazer a alteração manual.");
-
+                await showAlert("Selecione um jogador do elenco para fazer a alteração manual.");
                 return;
-
             }
-
             try {
-
-                await dbClient.from('jogadores').update({ presenca: status }).eq('id', idJogador);
-
-                if (status === 'Dispensado') await dbClient.from('convidados').delete().eq('jogador_id', idJogador);
-
-                alert("✅ Lista atualizada pelo Admin!");
-
+                const { error } = await dbClient.from('jogadores').update({ presenca: status }).eq('id', idJogador);
+                if (error) throw error;
+                if (status === 'Dispensado') {
+                    const { error: errDel } = await dbClient.from('convidados').delete().eq('jogador_id', idJogador);
+                    if (errDel) throw errDel;
+                }
+                showToast("✅ Lista atualizada pelo Admin!", "sucesso");
                 await carregarListaPresenca();
-
-            } catch (err) { console.error(err); }
-
+            } catch (err) {
+                console.error(err);
+                showToast("Erro ao atualizar o jogador.", "erro");
+            }
         }
 
-
-
-        document.getElementById('btn-admin-forcar-vou').addEventListener('click', () => forcarStatusJogadorAdmin('Confirmado'));
-
-        document.getElementById('btn-admin-forcar-naovou').addEventListener('click', () => forcarStatusJogadorAdmin('Dispensado'));
-
-
+        const btnAdminForcarVou = document.getElementById('btn-admin-forcar-vou');
+        const btnAdminForcarNaoVou = document.getElementById('btn-admin-forcar-naovou');
+        btnAdminForcarVou.addEventListener('click', withLoading(btnAdminForcarVou, null, () => forcarStatusJogadorAdmin('Confirmado')));
+        btnAdminForcarNaoVou.addEventListener('click', withLoading(btnAdminForcarNaoVou, null, () => forcarStatusJogadorAdmin('Dispensado')));
 
         // AÇÃO EXCLUSIVA DO ADMIN: CADASTRO DE NOVO ATLETA
-
-        document.getElementById('btn-admin-add-jogador').addEventListener('click', async () => {
-
+        const btnAdminAddJogador = document.getElementById('btn-admin-add-jogador');
+        btnAdminAddJogador.addEventListener('click', withLoading(btnAdminAddJogador, '...', async () => {
             const inputNome = document.getElementById('admin-novo-nome');
-
             const inputEmail = document.getElementById('admin-novo-email');
-
             const selectCat = document.getElementById('admin-nova-cat');
 
-
-
             const nome = inputNome.value.trim();
-
             const email = inputEmail.value.trim().toLowerCase();
-
             const categoria = selectCat.value;
 
-
-
             if (!nome || !email) {
-
-                alert("Preencha o nome e e-mail do novo jogador.");
-
+                await showAlert("Preencha o nome e e-mail do novo jogador.");
                 return;
-
             }
 
-
-
             try {
-
                 const { error } = await dbClient.from('jogadores').insert({
-
                     nome: nome,
-
                     email: email,
-
                     categoria: categoria,
-
                     presenca: 'Sem Resposta',
-
                     gols: 0,
-
                     bola_cheia_acumulado: 0,
-
                     bola_murcha_acumulado: 0,
-
-                    mensalidade_paga: false
-
+                    mensalidade_paga: false,
+                    is_admin: false
                 });
-
-
 
                 if (error) throw error;
 
-
-
-                alert(`⚽ ${nome} cadastrado com sucesso no elenco!`);
-
+                showToast(`⚽ ${nome} cadastrado com sucesso no elenco!`, "sucesso");
                 inputNome.value = "";
-
                 inputEmail.value = "";
-
                 await carregarListaPresenca();
-
             } catch (err) {
-
                 console.error(err);
-
-                alert("Erro ao cadastrar.");
-
+                await showAlert("Erro ao cadastrar o atleta. Verifique se o e-mail já não está em uso.");
             }
-
-        });
-
-
+        }));
 
         // RESET MANUAL DO ADMIN
-
-        document.getElementById('btn-admin-reset').addEventListener('click', async () => {
-
-            if (!confirm("⚠️ Tem certeza que deseja limpar as presenças e convidados para iniciar a nova semana?")) return;
-
+        const btnAdminReset = document.getElementById('btn-admin-reset');
+        btnAdminReset.addEventListener('click', withLoading(btnAdminReset, '🧹 Limpando...', async () => {
+            const confirmou = await showConfirm("⚠️ Tem certeza que deseja limpar as presenças e convidados para iniciar a nova semana?");
+            if (!confirmou) return;
             try {
-
-                await dbClient.from('jogadores').update({ presenca: 'Sem Resposta' }).neq('mensalidade_paga', 'Inexistente');
-
-                await dbClient.from('convidados').delete().neq('id', 0);
-
-                alert("✅ Lista limpa com sucesso!");
-
+                const { error: errUpd } = await dbClient.from('jogadores').update({ presenca: 'Sem Resposta' }).neq('id', 0);
+                if (errUpd) throw errUpd;
+                const { error: errDel } = await dbClient.from('convidados').delete().neq('id', 0);
+                if (errDel) throw errDel;
+                showToast("✅ Lista limpa com sucesso!", "sucesso");
                 await carregarListaPresenca();
-
-            } catch (err) { console.error(err); }
-
-        });
-
-
+            } catch (err) {
+                console.error(err);
+                await showAlert("Erro ao limpar a lista. Tenta novamente.");
+            }
+        }));
 
         // ADICIONAR CONVIDADO
-
-        document.getElementById('btn-add-convidado').addEventListener('click', async () => {
-
+        const btnAddConvidado = document.getElementById('btn-add-convidado');
+        btnAddConvidado.addEventListener('click', withLoading(btnAddConvidado, null, async () => {
             const input = document.getElementById('input-convidado');
-
             const nomeConvidado = input.value.trim();
-
             if (!nomeConvidado || !SampleLogado) return;
+            try {
+                const { error } = await dbClient.from('convidados').insert({ nome: nomeConvidado, jogador_id: SampleLogado.id });
+                if (error) throw error;
+                input.value = "";
+                await carregarListaPresenca();
+            } catch (err) {
+                console.error(err);
+                showToast("Erro ao adicionar convidado.", "erro");
+            }
+        }));
+
+        const btnVouEl = document.getElementById('btn-vou');
+        const btnNaoVouEl = document.getElementById('btn-naovou');
+        btnVouEl.addEventListener('click', withLoading(btnVouEl, null, () => registrarPresenca('Confirmado')));
+        btnNaoVouEl.addEventListener('click', withLoading(btnNaoVouEl, null, () => registrarPresenca('Dispensado')));
+
+        // ============================================================
+        // VOTAÇÃO DO BABA (bola cheia / bola murcha do dia)
+        // ============================================================
+        let sessaoVotacaoAtual = null;
+        let candidatosVotacao = [];
+        let meusVotos = { cheia: null, murcha: null };
+        let apuracaoPendente = null;
+        let timerVotacaoInterval = null;
+
+        function iniciarTimerVotacao(abertaEm) {
+            const el = document.getElementById('votacao-timer');
+            const inicio = new Date(abertaEm).getTime();
+            function atualizar() {
+                const diffSeg = Math.max(0, Math.floor((Date.now() - inicio) / 1000));
+                const min = Math.floor(diffSeg / 60);
+                const seg = diffSeg % 60;
+                el.innerText = `${min}:${String(seg).padStart(2, '0')}`;
+            }
+            atualizar();
+            timerVotacaoInterval = setInterval(atualizar, 1000);
+        }
+        function pararTimerVotacao() {
+            if (timerVotacaoInterval) { clearInterval(timerVotacaoInterval); timerVotacaoInterval = null; }
+        }
+
+        async function carregarVotacao() {
+            const painelAdmin = document.getElementById('admin-votacao-controles');
+            const btnIniciar = document.getElementById('btn-iniciar-votacao');
+            const btnEncerrar = document.getElementById('btn-encerrar-votacao');
+            const painelEncerramento = document.getElementById('painel-encerramento');
+            const statusAberta = document.getElementById('votacao-status-aberta');
+            const formVotacao = document.getElementById('votacao-form');
+            const resultado = document.getElementById('votacao-resultado');
+            const vazio = document.getElementById('votacao-vazio');
+
+            painelEncerramento.classList.add('hidden');
+            apuracaoPendente = null;
+            pararTimerVotacao();
+
+            if (ehAdmin()) painelAdmin.classList.remove('hidden'); else painelAdmin.classList.add('hidden');
+
+            statusAberta.classList.add('hidden');
+            formVotacao.classList.add('hidden');
+            resultado.classList.add('hidden');
+            vazio.classList.add('hidden');
+            btnIniciar.classList.add('hidden');
+            btnEncerrar.classList.add('hidden');
 
             try {
+                const { data: sessoes, error: errS } = await dbClient
+                    .from('votacao_sessao')
+                    .select('*')
+                    .order('id', { ascending: false })
+                    .limit(1);
+                if (errS) throw errS;
 
-                await dbClient.from('convidados').insert({ nome: nomeConvidado, jogador_id: SampleLogado.id });
+                sessaoVotacaoAtual = (sessoes && sessoes.length > 0) ? sessoes[0] : null;
 
-                input.value = "";
+                const { data: jogadores, error: errJ } = await dbClient
+                    .from('jogadores')
+                    .select('id, nome')
+                    .order('nome', { ascending: true });
+                if (errJ) throw errJ;
+                candidatosVotacao = jogadores || [];
 
-                await carregarListaPresenca();
+                if (!sessaoVotacaoAtual || sessaoVotacaoAtual.status !== 'aberta') {
+                    if (ehAdmin()) btnIniciar.classList.remove('hidden');
 
-            } catch (err) { console.error(err); }
+                    if (sessaoVotacaoAtual && sessaoVotacaoAtual.status === 'fechada' && (sessaoVotacaoAtual.vencedor_cheia_id || sessaoVotacaoAtual.vencedor_murcha_id)) {
+                        await renderResultadoVotacao(sessaoVotacaoAtual);
+                        resultado.classList.remove('hidden');
+                    } else {
+                        vazio.classList.remove('hidden');
+                    }
+                    return;
+                }
 
-        });
+                // Sessão aberta
+                if (ehAdmin()) btnEncerrar.classList.remove('hidden');
+                statusAberta.classList.remove('hidden');
+                iniciarTimerVotacao(sessaoVotacaoAtual.aberta_em);
 
+                const { data: votosUsuario, error: errV } = await dbClient
+                    .from('votos')
+                    .select('categoria, votado_id')
+                    .eq('sessao_id', sessaoVotacaoAtual.id)
+                    .eq('votante_id', SampleLogado.id);
+                if (errV) throw errV;
 
+                meusVotos = { cheia: null, murcha: null };
+                (votosUsuario || []).forEach(v => { meusVotos[v.categoria] = v.votado_id; });
 
-        document.getElementById('btn-vou').addEventListener('click', () => registrarPresenca('Confirmado'));
+                renderOpcoesVotacao();
+                formVotacao.classList.remove('hidden');
 
-        document.getElementById('btn-naovou').addEventListener('click', () => registrarPresenca('Dispensado'));
+            } catch (err) {
+                console.error(err);
+                showToast("Erro ao carregar a votação.", "erro");
+            }
+        }
 
+        function renderOpcoesVotacao() {
+            const containerCheia = document.getElementById('opcoes-cheia');
+            const containerMurcha = document.getElementById('opcoes-murcha');
+            containerCheia.innerHTML = '';
+            containerMurcha.innerHTML = '';
 
+            candidatosVotacao.forEach(j => {
+                const selecionadoCheia = meusVotos.cheia === j.id;
+                const btnCheia = document.createElement('button');
+                btnCheia.className = `text-xs font-bold py-2.5 rounded-lg border transition cursor-pointer ${selecionadoCheia ? 'bg-green-600 text-white border-green-500' : 'bg-marinho-deep text-white border-marinho-light hover:border-green-500/50'}`;
+                btnCheia.innerText = j.nome;
+                btnCheia.onclick = () => votar('cheia', j.id);
+                containerCheia.appendChild(btnCheia);
 
-        // FORMULÁRIO DE LOGIN
+                const selecionadoMurcha = meusVotos.murcha === j.id;
+                const btnMurcha = document.createElement('button');
+                btnMurcha.className = `text-xs font-bold py-2.5 rounded-lg border transition cursor-pointer ${selecionadoMurcha ? 'bg-red-600 text-white border-red-500' : 'bg-marinho-deep text-white border-marinho-light hover:border-red-500/50'}`;
+                btnMurcha.innerText = j.nome;
+                btnMurcha.onclick = () => votar('murcha', j.id);
+                containerMurcha.appendChild(btnMurcha);
+            });
+        }
+
+        async function votar(categoria, votadoId) {
+            if (!SampleLogado || !sessaoVotacaoAtual) return;
+            try {
+                const { error } = await dbClient.from('votos').upsert({
+                    sessao_id: sessaoVotacaoAtual.id,
+                    categoria: categoria,
+                    votante_id: SampleLogado.id,
+                    votado_id: votadoId
+                }, { onConflict: 'sessao_id,categoria,votante_id' });
+                if (error) throw error;
+                meusVotos[categoria] = votadoId;
+                renderOpcoesVotacao();
+                showToast(categoria === 'cheia' ? "👍 Voto em Bola Cheia registrado!" : "👎 Voto em Bola Murcha registrado!", "sucesso");
+            } catch (err) {
+                console.error(err);
+                showToast("Erro ao registrar seu voto.", "erro");
+            }
+        }
+
+        const btnIniciarVotacaoEl = document.getElementById('btn-iniciar-votacao');
+        btnIniciarVotacaoEl.addEventListener('click', withLoading(btnIniciarVotacaoEl, null, async () => {
+            if (!ehAdmin() || !SampleLogado) return;
+            try {
+                const { error } = await dbClient.from('votacao_sessao').insert({
+                    status: 'aberta',
+                    aberta_em: new Date().toISOString(),
+                    aberta_por: SampleLogado.id
+                });
+                if (error) throw error;
+                showToast("🟢 Votação iniciada!", "sucesso");
+                await carregarVotacao();
+            } catch (err) {
+                console.error(err);
+                showToast("Erro ao iniciar a votação.", "erro");
+            }
+        }));
+
+        const btnEncerrarVotacaoEl = document.getElementById('btn-encerrar-votacao');
+        btnEncerrarVotacaoEl.addEventListener('click', withLoading(btnEncerrarVotacaoEl, null, async () => {
+            if (!ehAdmin() || !sessaoVotacaoAtual) return;
+            try {
+                const { data: votos, error } = await dbClient
+                    .from('votos')
+                    .select('categoria, votado_id')
+                    .eq('sessao_id', sessaoVotacaoAtual.id);
+                if (error) throw error;
+
+                const apurar = (categoria) => {
+                    const contagem = {};
+                    (votos || []).filter(v => v.categoria === categoria).forEach(v => {
+                        contagem[v.votado_id] = (contagem[v.votado_id] || 0) + 1;
+                    });
+                    const entradas = Object.entries(contagem).map(([id, count]) => ({
+                        id: Number(id),
+                        nome: (candidatosVotacao.find(c => c.id === Number(id)) || {}).nome || '—',
+                        count
+                    })).sort((a, b) => b.count - a.count);
+                    const max = entradas.length ? entradas[0].count : 0;
+                    const empatados = entradas.filter(e => e.count === max && max > 0);
+                    return { entradas, empate: empatados.length > 1, vencedorId: empatados.length === 1 ? empatados[0].id : null };
+                };
+
+                apuracaoPendente = { cheia: apurar('cheia'), murcha: apurar('murcha') };
+                renderApuracao();
+                document.getElementById('painel-encerramento').classList.remove('hidden');
+                document.getElementById('votacao-form').classList.add('hidden');
+                document.getElementById('votacao-status-aberta').classList.add('hidden');
+                pararTimerVotacao();
+            } catch (err) {
+                console.error(err);
+                showToast("Erro ao apurar os votos.", "erro");
+            }
+        }));
+
+        function renderApuracao() {
+            ['cheia', 'murcha'].forEach(categoria => {
+                const el = document.getElementById(`apuracao-${categoria}`);
+                const dados = apuracaoPendente[categoria];
+                const titulo = categoria === 'cheia' ? '👍 Bola Cheia' : '👎 Bola Murcha';
+                let html = `<p class="text-xs font-bold text-white/80">${titulo}</p>`;
+
+                if (dados.entradas.length === 0) {
+                    html += `<p class="text-xs text-marinho-light italic">Nenhum voto registrado.</p>`;
+                } else {
+                    html += dados.entradas.map(e => `
+                        <div class="flex justify-between items-center text-xs bg-marinho-deep border border-marinho-light/50 rounded-lg px-3 py-2">
+                            <span class="text-white font-medium">${e.nome}</span>
+                            <span class="text-marinho-light font-bold">${e.count} voto${e.count !== 1 ? 's' : ''}</span>
+                        </div>
+                    `).join('');
+                }
+
+                if (dados.empate) {
+                    const maxCount = dados.entradas[0].count;
+                    html += `
+                        <div class="pt-2 space-y-1.5">
+                            <p class="text-[11px] font-bold text-yellow-400 uppercase">⚠️ Empate — escolha o voto de minerva:</p>
+                            <select id="minerva-${categoria}" class="w-full bg-marinho-deep border border-yellow-500/40 rounded-lg p-2 text-xs text-white">
+                                <option value="">Selecione o vencedor...</option>
+                                ${dados.entradas.filter(e => e.count === maxCount).map(e => `<option value="${e.id}">${e.nome}</option>`).join('')}
+                            </select>
+                        </div>
+                    `;
+                }
+
+                el.innerHTML = html;
+            });
+        }
+
+        const btnConfirmarEncerramento = document.getElementById('btn-confirmar-encerramento');
+        btnConfirmarEncerramento.addEventListener('click', withLoading(btnConfirmarEncerramento, 'Encerrando...', async () => {
+            if (!apuracaoPendente || !sessaoVotacaoAtual) return;
+
+            let vencedorCheiaId = apuracaoPendente.cheia.vencedorId;
+            const empateCheia = apuracaoPendente.cheia.empate;
+            if (empateCheia) {
+                const sel = document.getElementById('minerva-cheia');
+                if (!sel.value) { await showAlert("Escolha o voto de minerva para Bola Cheia antes de encerrar."); return; }
+                vencedorCheiaId = Number(sel.value);
+            }
+
+            let vencedorMurchaId = apuracaoPendente.murcha.vencedorId;
+            const empateMurcha = apuracaoPendente.murcha.empate;
+            if (empateMurcha) {
+                const sel = document.getElementById('minerva-murcha');
+                if (!sel.value) { await showAlert("Escolha o voto de minerva para Bola Murcha antes de encerrar."); return; }
+                vencedorMurchaId = Number(sel.value);
+            }
+
+            try {
+                const { error: errSessao } = await dbClient.from('votacao_sessao').update({
+                    status: 'fechada',
+                    fechada_em: new Date().toISOString(),
+                    fechada_por: SampleLogado.id,
+                    vencedor_cheia_id: vencedorCheiaId,
+                    vencedor_murcha_id: vencedorMurchaId,
+                    empate_cheia: empateCheia,
+                    empate_murcha: empateMurcha
+                }).eq('id', sessaoVotacaoAtual.id);
+                if (errSessao) throw errSessao;
+
+                if (vencedorCheiaId) {
+                    const { data: jc } = await dbClient.from('jogadores').select('bola_cheia_acumulado').eq('id', vencedorCheiaId).single();
+                    await dbClient.from('jogadores').update({ bola_cheia_acumulado: (jc?.bola_cheia_acumulado || 0) + 1 }).eq('id', vencedorCheiaId);
+                }
+                if (vencedorMurchaId) {
+                    const { data: jm } = await dbClient.from('jogadores').select('bola_murcha_acumulado').eq('id', vencedorMurchaId).single();
+                    await dbClient.from('jogadores').update({ bola_murcha_acumulado: (jm?.bola_murcha_acumulado || 0) + 1 }).eq('id', vencedorMurchaId);
+                }
+
+                showToast("✅ Votação encerrada e artilharia atualizada!", "sucesso");
+                await carregarVotacao();
+                await carregarJogadores();
+            } catch (err) {
+                console.error(err);
+                showToast("Erro ao encerrar a votação.", "erro");
+            }
+        }));
+
+        async function renderResultadoVotacao(sessao) {
+            const container = document.getElementById('votacao-resultado-conteudo');
+            const buscarNome = async (id) => {
+                if (!id) return null;
+                const { data } = await dbClient.from('jogadores').select('nome').eq('id', id).single();
+                return data?.nome || '—';
+            };
+            const nomeCheia = await buscarNome(sessao.vencedor_cheia_id);
+            const nomeMurcha = await buscarNome(sessao.vencedor_murcha_id);
+
+            container.innerHTML = `
+                <div class="flex justify-between items-center bg-marinho-deep border border-marinho-light/50 rounded-lg px-3 py-2.5">
+                    <span class="text-xs font-bold text-green-400">👍 Bola Cheia</span>
+                    <span class="text-sm font-bold text-white">${nomeCheia || 'Sem votos'}${sessao.empate_cheia ? ' <span class="text-[10px] text-yellow-400 font-normal">(voto de minerva)</span>' : ''}</span>
+                </div>
+                <div class="flex justify-between items-center bg-marinho-deep border border-marinho-light/50 rounded-lg px-3 py-2.5">
+                    <span class="text-xs font-bold text-red-400">👎 Bola Murcha</span>
+                    <span class="text-sm font-bold text-white">${nomeMurcha || 'Sem votos'}${sessao.empate_murcha ? ' <span class="text-[10px] text-yellow-400 font-normal">(voto de minerva)</span>' : ''}</span>
+                </div>
+            `;
+        }
+
+        // ============================================================
+        // LOGIN — e-mail comum é frictionless (como sempre foi).
+        // E-mails marcados como admin (is_admin) precisam digitar uma
+        // senha real (Supabase Auth), verificada no servidor. Essa
+        // senha é o que a trigger do banco exige pra liberar edição
+        // de gols/financeiro/admin — não dá pra burlar pelo console.
+        // ============================================================
+        let dadosJogadorPendente = null;
+        let modoSenhaAdmin = 'login'; // 'login' | 'criar'
+
+        async function finalizarLogin(data) {
+            SampleLogado = data;
+
+            await carregarJogadores();
+            renderizarFinanceiro(data);
+            await carregarListaPresenca();
+
+            document.getElementById('tela-login').classList.add('hidden');
+            document.getElementById('tela-principal').classList.remove('hidden');
+            document.getElementById('menu-inferior').classList.remove('hidden');
+            document.getElementById('btn-logout').classList.remove('hidden');
+        }
 
         document.getElementById('form-login').addEventListener('submit', async function(event) {
-
             event.preventDefault();
-
             const emailInput = document.getElementById('login-email').value.trim().toLowerCase();
-
             const btnEntrar = document.getElementById('btn-entrar');
-
             const feedback = document.getElementById('login-feedback');
 
-            
-
             feedback.classList.remove('hidden', 'bg-red-900/40', 'text-red-200', 'bg-green-900/40', 'text-green-200');
-
             feedback.classList.add('bg-white/10', 'text-white');
-
             feedback.innerText = "Verificando elenco...";
-
             btnEntrar.disabled = true;
-
             btnEntrar.classList.add('opacity-50');
 
-
-
             try {
-
                 const { data, error } = await dbClient
-
                     .from('jogadores')
-
                     .select('*')
-
                     .eq('email', emailInput)
-
                     .maybeSingle();
-
-
 
                 if (error) throw error;
 
-
-
-                if (data) {
-
-                    SampleLogado = data;
-
+                if (!data) {
                     feedback.classList.remove('bg-white/10', 'text-white');
-
-                    feedback.classList.add('bg-green-900/40', 'text-green-200');
-
-                    feedback.innerText = `Autorizado! Bem-vindo, ${data.nome}.`;
-
-                    
-
-                    await carregarJogadores();
-
-                    renderizarFinanceiro(data);
-
-                    await carregarListaPresenca();
-
-                    
-
-                    setTimeout(() => {
-
-                        document.getElementById('tela-login').classList.add('hidden');
-
-                        document.getElementById('tela-principal').classList.remove('hidden');
-
-                        document.getElementById('menu-inferior').classList.remove('hidden');
-
-                        document.getElementById('btn-logout').classList.remove('hidden');
-
-                        feedback.classList.add('hidden');
-
-                    }, 800);
-
-                } else {
-
-                    feedback.classList.remove('bg-white/10', 'text-white');
-
                     feedback.classList.add('bg-red-900/40', 'text-red-200');
-
                     feedback.innerText = "E-mail não encontrado no elenco.";
-
                     btnEntrar.disabled = false;
-
                     btnEntrar.classList.remove('opacity-50');
-
+                    return;
                 }
 
-            } catch (err) {
+                if (data.is_admin !== true) {
+                    // Fluxo normal, sem senha — igual sempre foi.
+                    feedback.classList.remove('bg-white/10', 'text-white');
+                    feedback.classList.add('bg-green-900/40', 'text-green-200');
+                    feedback.innerText = `Autorizado! Bem-vindo, ${data.nome}.`;
+                    setTimeout(async () => {
+                        await finalizarLogin(data);
+                        feedback.classList.add('hidden');
+                    }, 800);
+                    return;
+                }
 
-                console.error(err);
+                // Admin: exige senha antes de liberar o app.
+                dadosJogadorPendente = data;
+                modoSenhaAdmin = data.auth_uid ? 'login' : 'criar';
 
+                document.getElementById('form-login').classList.add('hidden');
+                const bloco = document.getElementById('bloco-senha-admin');
+                const subtitulo = document.getElementById('senha-admin-subtitulo');
+                const inputSenha = document.getElementById('input-senha-admin');
+                const blocoConfirmar = document.getElementById('bloco-confirmar-senha');
+
+                if (modoSenhaAdmin === 'criar') {
+                    subtitulo.innerText = `Primeiro acesso, ${data.nome}. Crie uma senha de administrador (mín. 6 caracteres).`;
+                    inputSenha.setAttribute('autocomplete', 'new-password');
+                    blocoConfirmar.classList.remove('hidden');
+                } else {
+                    subtitulo.innerText = `Digite a senha de administrador de ${data.nome}.`;
+                    inputSenha.setAttribute('autocomplete', 'current-password');
+                    blocoConfirmar.classList.add('hidden');
+                }
+
+                document.getElementById('senha-admin-feedback').classList.add('hidden');
+                inputSenha.value = '';
+                document.getElementById('input-confirmar-senha-admin').value = '';
+                bloco.classList.remove('hidden');
+                feedback.classList.add('hidden');
                 btnEntrar.disabled = false;
-
                 btnEntrar.classList.remove('opacity-50');
+                setTimeout(() => inputSenha.focus(), 100);
 
+            } catch (err) {
+                console.error(err);
+                feedback.classList.remove('bg-white/10', 'text-white');
+                feedback.classList.add('bg-red-900/40', 'text-red-200');
+                feedback.innerText = "Erro ao conectar. Verifique sua internet e tente de novo.";
+                btnEntrar.disabled = false;
+                btnEntrar.classList.remove('opacity-50');
             }
-
         });
 
+        document.getElementById('btn-voltar-login').addEventListener('click', () => {
+            dadosJogadorPendente = null;
+            document.getElementById('bloco-senha-admin').classList.add('hidden');
+            document.getElementById('form-login').classList.remove('hidden');
+            document.getElementById('login-email').value = '';
+            document.getElementById('login-feedback').classList.add('hidden');
+        });
 
+        const btnEntrarSenhaAdmin = document.getElementById('btn-entrar-senha-admin');
+        btnEntrarSenhaAdmin.addEventListener('click', withLoading(btnEntrarSenhaAdmin, 'Entrando...', async () => {
+            if (!dadosJogadorPendente) return;
+            const senha = document.getElementById('input-senha-admin').value;
+            const feedback = document.getElementById('senha-admin-feedback');
+
+            const mostrarFeedback = (msg, tipo) => {
+                feedback.classList.remove('hidden', 'bg-red-900/40', 'text-red-200', 'bg-green-900/40', 'text-green-200');
+                feedback.classList.add(tipo === 'erro' ? 'bg-red-900/40' : 'bg-green-900/40', tipo === 'erro' ? 'text-red-200' : 'text-green-200');
+                feedback.innerText = msg;
+            };
+
+            if (!senha || senha.length < 6) {
+                mostrarFeedback("A senha precisa ter pelo menos 6 caracteres.", 'erro');
+                return;
+            }
+
+            try {
+                if (modoSenhaAdmin === 'criar') {
+                    const confirmar = document.getElementById('input-confirmar-senha-admin').value;
+                    if (senha !== confirmar) {
+                        mostrarFeedback("As senhas não coincidem.", 'erro');
+                        return;
+                    }
+
+                    const { data: signUpData, error: signUpError } = await dbClient.auth.signUp({
+                        email: dadosJogadorPendente.email,
+                        password: senha
+                    });
+                    if (signUpError) throw signUpError;
+
+                    if (!signUpData.session) {
+                        mostrarFeedback("Conta criada! Confirme seu e-mail (verifique a caixa de entrada) e depois entre de novo com a senha.", 'sucesso');
+                        return;
+                    }
+
+                    const { error: linkError } = await dbClient
+                        .from('jogadores')
+                        .update({ auth_uid: signUpData.user.id })
+                        .eq('id', dadosJogadorPendente.id);
+                    if (linkError) throw linkError;
+
+                    dadosJogadorPendente.auth_uid = signUpData.user.id;
+                    await finalizarLogin(dadosJogadorPendente);
+
+                } else {
+                    const { error: signInError } = await dbClient.auth.signInWithPassword({
+                        email: dadosJogadorPendente.email,
+                        password: senha
+                    });
+                    if (signInError) throw signInError;
+
+                    await finalizarLogin(dadosJogadorPendente);
+                }
+            } catch (err) {
+                console.error(err);
+                const msg = (err.message || '').toLowerCase().includes('invalid login credentials')
+                    ? "Senha incorreta."
+                    : "Erro ao autenticar. Tenta de novo.";
+                mostrarFeedback(msg, 'erro');
+            }
+        }));
 
         // NAVEGAÇÃO DE ABAS
-
         ['jogadores', 'financeiro', 'presenca', 'votacao'].forEach(aba => {
-
             const btn = document.getElementById(`btn-aba-${aba}`);
-
             if (btn) {
-
                 btn.addEventListener('click', async function(e) {
+                    pararTimerVotacao();
 
                     const abas = ['jogadores', 'financeiro', 'presenca', 'votacao'];
-
                     abas.forEach(a => {
-
                         const el = document.getElementById(`aba-${a}`);
-
                         if (el) el.classList.add('hidden');
-
                     });
-
-                    
 
                     const targetEl = document.getElementById(`aba-${aba}`);
-
                     if (targetEl) targetEl.classList.remove('hidden');
 
-                    
-
                     if (SampleLogado) {
-
                         try {
-
-                            const { data } = await dbClient.from('jogadores').select('*').eq('id', SampleLogado.id).single();
-
+                            const { data, error } = await dbClient.from('jogadores').select('*').eq('id', SampleLogado.id).single();
+                            if (error) throw error;
                             if (data) {
-
                                 SampleLogado = data;
-
                                 if (aba === 'financeiro') renderizarFinanceiro(data);
-
                                 if (aba === 'presenca') await carregarListaPresenca();
-
+                                if (aba === 'votacao') await carregarVotacao();
                             }
-
-                        } catch (err) { console.error(err); }
-
+                        } catch (err) {
+                            console.error(err);
+                            showToast("Erro ao atualizar seus dados.", "erro");
+                        }
                     }
-
-
 
                     if (aba === 'jogadores') {
-
                         carregarJogadores();
-
                     }
 
-                    
-
                     const botoes = document.querySelectorAll('#menu-inferior button');
-
                     botoes.forEach(b => {
-
                         b.classList.remove('text-white', 'font-bold');
-
                         b.classList.add('text-marinho-light');
-
                     });
-
                     e.currentTarget.classList.remove('text-marinho-light');
-
                     e.currentTarget.classList.add('text-white', 'font-bold');
-
                 });
-
             }
-
         });
 
-
-
-        document.getElementById('btn-logout').addEventListener('click', () => {
-
+        document.getElementById('btn-logout').addEventListener('click', async () => {
+            try { await dbClient.auth.signOut(); } catch (e) { /* segue o baile mesmo se falhar */ }
             location.reload();
-
         });
-
     </script>
-
 </body>
-
-</html> 
-
+</html>
