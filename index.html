@@ -593,31 +593,31 @@
             if (jog.valor_mensalidade !== null && jog.valor_mensalidade !== undefined && jog.valor_mensalidade > 0) valorMensal = Number(jog.valor_mensalidade);
 
             const statusMensalidade = jog.mensalidade_paga
-                ? `<span class="bg-green-500/10 text-green-400 border border-green-500/20 px-3 py-1 rounded-full text-xs font-bold">🟢 PAGO</span>`
-                : `<span class="bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full text-xs font-bold">🔴 PENDENTE (R$ ${valorMensal.toFixed(2)})</span>`;
+                ? `<span class="whitespace-nowrap bg-green-500/10 text-green-400 border border-green-500/20 px-3 py-1 rounded-full text-xs font-bold">🟢 PAGO</span>`
+                : `<span class="whitespace-nowrap bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full text-xs font-bold">🔴 PENDENTE (R$ ${valorMensal.toFixed(2)})</span>`;
 
             const vCartoes = jog.cartoes_pendentes || 0;
             const statusCartoes = vCartoes > 0
-                ? `<span class="bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full text-xs font-bold">🔴 PENDENTE (R$ ${vCartoes.toFixed(2)})</span>`
-                : `<span class="bg-white/5 text-gray-400 border border-white/10 px-3 py-1 rounded-full text-xs font-medium">🟢 Sem Débitos</span>`;
+                ? `<span class="whitespace-nowrap bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full text-xs font-bold">🔴 PENDENTE (R$ ${vCartoes.toFixed(2)})</span>`
+                : `<span class="whitespace-nowrap bg-white/5 text-gray-400 border border-white/10 px-3 py-1 rounded-full text-xs font-medium">🟢 Sem Débitos</span>`;
 
             const vMultas = jog.multas_pendentes || 0;
             const statusMultas = vMultas > 0
-                ? `<span class="bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full text-xs font-bold">🔴 PENDENTE (R$ ${vMultas.toFixed(2)})</span>`
-                : `<span class="bg-white/5 text-gray-400 border border-white/10 px-3 py-1 rounded-full text-xs font-medium">🟢 Sem Débitos</span>`;
+                ? `<span class="whitespace-nowrap bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full text-xs font-bold">🔴 PENDENTE (R$ ${vMultas.toFixed(2)})</span>`
+                : `<span class="whitespace-nowrap bg-white/5 text-gray-400 border border-white/10 px-3 py-1 rounded-full text-xs font-medium">🟢 Sem Débitos</span>`;
 
             container.innerHTML = `
-                <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 flex justify-between items-center shadow-sm">
-                    <div><p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider">Mensalidade</p><p class="text-base font-bold text-white mt-0.5">${mesAtualNome} / ${anoAtual}</p></div>
-                    <div>${statusMensalidade}</div>
+                <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 flex justify-between items-start gap-3 shadow-sm">
+                    <div class="min-w-0"><p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider">Mensalidade</p><p class="text-base font-bold text-white mt-0.5">${mesAtualNome} / ${anoAtual}</p></div>
+                    <div class="flex-shrink-0 pt-0.5">${statusMensalidade}</div>
                 </div>
-                <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 flex justify-between items-center shadow-sm">
-                    <div><p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider">Pendência de Cartões</p><p class="text-base font-bold text-white mt-0.5">Acumulado das Rodadas</p></div>
-                    <div>${statusCartoes}</div>
+                <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 flex justify-between items-start gap-3 shadow-sm">
+                    <div class="min-w-0"><p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider">Pendência de Cartões</p><p class="text-base font-bold text-white mt-0.5">Acumulado das Rodadas</p></div>
+                    <div class="flex-shrink-0 pt-0.5">${statusCartoes}</div>
                 </div>
-                <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 flex justify-between items-center shadow-sm">
-                    <div><p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider">Multas Administrativas</p><p class="text-base font-bold text-white mt-0.5">Nome na lista e ausência no jogo</p></div>
-                    <div>${statusMultas}</div>
+                <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 flex justify-between items-start gap-3 shadow-sm">
+                    <div class="min-w-0"><p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider">Multas Administrativas</p><p class="text-base font-bold text-white mt-0.5">Nome na lista e ausência no jogo</p></div>
+                    <div class="flex-shrink-0 pt-0.5">${statusMultas}</div>
                 </div>
             `;
         }
@@ -925,11 +925,21 @@
         async function handleRealtimeJogadores(payload) {
             if (abaVisivel('jogadores')) await carregarJogadores();
             if (abaVisivel('presenca')) await carregarListaPresenca();
-            if (abaVisivel('financeiro') && SampleLogado) {
+            if (SampleLogado) {
                 const idAlterado = payload.new?.id ?? payload.old?.id;
                 if (idAlterado === SampleLogado.id) {
                     const { data } = await dbClient.from('jogadores').select('*').eq('id', SampleLogado.id).single();
-                    if (data) { SampleLogado = data; renderizarFinanceiro(data); }
+                    if (data) {
+                        SampleLogado = data;
+                        if (abaVisivel('financeiro')) renderizarFinanceiro(data);
+
+                        const btnFinanceiro = document.getElementById('btn-aba-financeiro');
+                        if (data.categoria === 'Goleiro') {
+                            btnFinanceiro.classList.add('hidden');
+                        } else {
+                            btnFinanceiro.classList.remove('hidden');
+                        }
+                    }
                 }
             }
         }
@@ -1275,6 +1285,14 @@
             renderizarFinanceiro(data);
             await carregarListaPresenca();
             iniciarRealtime();
+
+            // Goleiro é prestador (recebe, não paga) — sem acesso à aba Finanças.
+            const btnFinanceiro = document.getElementById('btn-aba-financeiro');
+            if (data.categoria === 'Goleiro') {
+                btnFinanceiro.classList.add('hidden');
+            } else {
+                btnFinanceiro.classList.remove('hidden');
+            }
 
             document.getElementById('tela-login').classList.add('hidden');
             document.getElementById('tela-principal').classList.remove('hidden');
