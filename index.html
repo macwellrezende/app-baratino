@@ -235,6 +235,18 @@
                 </div>
             </div>
 
+            <!-- Mensagem pessoal pra quem foi eleito -->
+            <div id="meu-resultado-votacao" class="hidden space-y-3">
+                <div id="meu-resultado-cheia" class="hidden bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-center">
+                    <p class="text-2xl">🏆</p>
+                    <p class="text-sm font-black text-green-300 mt-1">Parabéns! Você foi eleito Bola Cheia do dia!</p>
+                </div>
+                <div id="meu-resultado-murcha" class="hidden bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-center">
+                    <p class="text-2xl">😅</p>
+                    <p class="text-sm font-black text-red-300 mt-1">Você foi eleito Bola Murcha do dia... vai que na próxima!</p>
+                </div>
+            </div>
+
             <!-- Resultado da última votação -->
             <div id="votacao-resultado" class="hidden bg-marinho-card border border-marinho-light rounded-xl p-4 space-y-3">
                 <p class="text-xs font-black text-white/70 uppercase tracking-widest">🏆 Resultado da Última Votação</p>
@@ -276,6 +288,10 @@
                 <label class="block text-[11px] font-bold uppercase text-white/70 mb-1">Nome</label>
                 <input type="text" id="edit-nome" class="w-full bg-marinho-deep border border-marinho-light rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-white">
             </div>
+            <div>
+                <label class="block text-[11px] font-bold uppercase text-white/70 mb-1">E-mail de acesso</label>
+                <input type="email" id="edit-email" class="w-full bg-marinho-deep border border-marinho-light rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-white">
+            </div>
             <div class="grid grid-cols-2 gap-2">
                 <div>
                     <label class="block text-[11px] font-bold uppercase text-white/70 mb-1">Categoria</label>
@@ -301,10 +317,16 @@
             </div>
             <div class="pt-2 border-t border-marinho-light/40 space-y-2">
                 <p class="text-[11px] font-bold text-white/70 uppercase">Financeiro</p>
-                <label class="flex items-center gap-2 text-sm text-white">
-                    <input type="checkbox" id="edit-mensalidade-paga" class="w-4 h-4 accent-green-500">
-                    Mensalidade do mês paga
-                </label>
+                <div>
+                    <label class="block text-[11px] font-bold uppercase text-white/70 mb-1">Meses de mensalidade em aberto</label>
+                    <input type="number" id="edit-meses-pendentes" min="0" step="1" class="w-full bg-marinho-deep border border-marinho-light rounded-lg p-2.5 text-sm text-white">
+                    <p class="text-[10px] text-marinho-light mt-1">Só pra mostrar a contagem na tela — não faz conta sozinho, porque o valor de cada mês pode ser diferente.</p>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold uppercase text-white/70 mb-1">Valor total pendente (R$)</label>
+                    <input type="number" id="edit-valor-mensalidades-pendentes" min="0" step="0.01" class="w-full bg-marinho-deep border border-marinho-light rounded-lg p-2.5 text-sm text-white">
+                    <p class="text-[10px] text-marinho-light mt-1">Some você mesmo os meses com valores diferentes (ex: R$45 + R$55 + R$55 = R$155,00). É esse valor que aparece pro atleta.</p>
+                </div>
                 <div class="grid grid-cols-3 gap-2">
                     <div>
                         <label class="block text-[10px] font-bold uppercase text-white/60 mb-1">Valor Mens. (R$)</label>
@@ -330,6 +352,9 @@
                 <button id="btn-cancelar-edicao" class="flex-1 bg-marinho-deep border border-marinho-light text-white font-bold py-2.5 rounded-lg text-sm cursor-pointer hover:bg-white/5">Cancelar</button>
                 <button id="btn-salvar-edicao" class="flex-1 bg-white text-gray-950 font-black py-2.5 rounded-lg text-sm cursor-pointer hover:bg-gray-100">Salvar</button>
             </div>
+            <button id="btn-excluir-jogador" class="w-full bg-red-600/10 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 font-bold p-2.5 rounded-lg text-xs transition uppercase tracking-wider cursor-pointer">
+                🗑️ Excluir Atleta do Elenco
+            </button>
         </div>
     </div>
 
@@ -515,11 +540,13 @@
 
                 document.getElementById('edit-id').value = data.id;
                 document.getElementById('edit-nome').value = data.nome || '';
+                document.getElementById('edit-email').value = data.email || '';
                 document.getElementById('edit-categoria').value = (data.categoria === 'Mensalista' ? 'Associado' : data.categoria) || 'Associado';
                 document.getElementById('edit-gols').value = data.gols || 0;
                 document.getElementById('edit-bolacheia').value = data.bola_cheia_acumulado || 0;
                 document.getElementById('edit-bolamurcha').value = data.bola_murcha_acumulado || 0;
-                document.getElementById('edit-mensalidade-paga').checked = !!data.mensalidade_paga;
+                document.getElementById('edit-meses-pendentes').value = data.meses_pendentes || 0;
+                document.getElementById('edit-valor-mensalidades-pendentes').value = data.valor_mensalidades_pendentes || 0;
                 document.getElementById('edit-valor-mensalidade').value = data.valor_mensalidade ?? '';
                 document.getElementById('edit-cartoes').value = data.cartoes_pendentes || 0;
                 document.getElementById('edit-multas').value = data.multas_pendentes || 0;
@@ -547,15 +574,21 @@
             const nome = document.getElementById('edit-nome').value.trim();
             if (!nome) { await showAlert("O nome não pode ficar em branco."); return; }
 
+            const email = document.getElementById('edit-email').value.trim().toLowerCase();
+            if (!email || !email.includes('@')) { await showAlert("Digite um e-mail válido."); return; }
+
             const valorMensalRaw = document.getElementById('edit-valor-mensalidade').value;
 
             const payload = {
                 nome: nome,
+                email: email,
                 categoria: document.getElementById('edit-categoria').value,
                 gols: Number(document.getElementById('edit-gols').value) || 0,
                 bola_cheia_acumulado: Number(document.getElementById('edit-bolacheia').value) || 0,
                 bola_murcha_acumulado: Number(document.getElementById('edit-bolamurcha').value) || 0,
-                mensalidade_paga: document.getElementById('edit-mensalidade-paga').checked,
+                mensalidade_paga: (Number(document.getElementById('edit-valor-mensalidades-pendentes').value) || 0) === 0,
+                meses_pendentes: Number(document.getElementById('edit-meses-pendentes').value) || 0,
+                valor_mensalidades_pendentes: Number(document.getElementById('edit-valor-mensalidades-pendentes').value) || 0,
                 valor_mensalidade: valorMensalRaw ? Number(valorMensalRaw) : null,
                 cartoes_pendentes: Number(document.getElementById('edit-cartoes').value) || 0,
                 multas_pendentes: Number(document.getElementById('edit-multas').value) || 0,
@@ -576,7 +609,33 @@
                 }
             } catch (err) {
                 console.error(err);
-                showToast("Erro ao salvar. Verifique os dados e tente de novo.", "erro");
+                const msg = (err.message || '').toLowerCase().includes('duplicate')
+                    ? "Esse e-mail já está sendo usado por outro atleta."
+                    : "Erro ao salvar. Verifique os dados e tente de novo.";
+                showToast(msg, "erro");
+            }
+        }));
+
+        const btnExcluirJogador = document.getElementById('btn-excluir-jogador');
+        btnExcluirJogador.addEventListener('click', withLoading(btnExcluirJogador, 'Excluindo...', async () => {
+            const id = document.getElementById('edit-id').value;
+            const nome = document.getElementById('edit-nome').value || 'este atleta';
+            if (!id) return;
+
+            const confirmou = await showConfirm(`Tem certeza que quer excluir ${nome} do elenco? Isso remove o cadastro, os convidados e os votos dele de forma PERMANENTE. Não dá pra desfazer.`);
+            if (!confirmou) return;
+
+            try {
+                const { error } = await dbClient.from('jogadores').delete().eq('id', id);
+                if (error) throw error;
+
+                showToast(`🗑️ ${nome} foi removido do elenco.`, "sucesso");
+                fecharEdicaoJogador();
+                await carregarJogadores();
+                if (abaVisivel('presenca')) await carregarListaPresenca();
+            } catch (err) {
+                console.error(err);
+                showToast("Erro ao excluir o atleta. Tenta de novo.", "erro");
             }
         }));
 
@@ -592,9 +651,11 @@
             if (dataAtual.getMonth() === 6 || dataAtual.getMonth() === 7) valorMensal = 55.00;
             if (jog.valor_mensalidade !== null && jog.valor_mensalidade !== undefined && jog.valor_mensalidade > 0) valorMensal = Number(jog.valor_mensalidade);
 
-            const statusMensalidade = jog.mensalidade_paga
-                ? `<span class="whitespace-nowrap bg-green-500/10 text-green-400 border border-green-500/20 px-3 py-1 rounded-full text-xs font-bold">🟢 PAGO</span>`
-                : `<span class="whitespace-nowrap bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full text-xs font-bold">🔴 PENDENTE (R$ ${valorMensal.toFixed(2)})</span>`;
+            const mesesPendentes = jog.meses_pendentes || 0;
+            const totalMensalidade = jog.valor_mensalidades_pendentes || 0;
+            const statusMensalidade = totalMensalidade > 0
+                ? `<span class="whitespace-nowrap bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full text-xs font-bold">🔴 ${mesesPendentes > 0 ? (mesesPendentes + (mesesPendentes === 1 ? ' MÊS' : ' MESES') + ' — ') : ''}R$ ${totalMensalidade.toFixed(2)}</span>`
+                : `<span class="whitespace-nowrap bg-green-500/10 text-green-400 border border-green-500/20 px-3 py-1 rounded-full text-xs font-bold">🟢 EM DIA</span>`;
 
             const vCartoes = jog.cartoes_pendentes || 0;
             const statusCartoes = vCartoes > 0
@@ -608,7 +669,7 @@
 
             container.innerHTML = `
                 <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 flex justify-between items-start gap-3 shadow-sm">
-                    <div class="min-w-0"><p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider">Mensalidade</p><p class="text-base font-bold text-white mt-0.5">${mesAtualNome} / ${anoAtual}</p></div>
+                    <div class="min-w-0"><p class="text-[10px] text-marinho-light font-bold uppercase tracking-wider">Mensalidade</p><p class="text-base font-bold text-white mt-0.5">R$ ${valorMensal.toFixed(2)} / mês</p></div>
                     <div class="flex-shrink-0 pt-0.5">${statusMensalidade}</div>
                 </div>
                 <div class="bg-marinho-card border border-marinho-light rounded-xl p-4 flex justify-between items-start gap-3 shadow-sm">
@@ -634,6 +695,12 @@
 
             const listaAberta = verificarJanelaLista();
 
+            const temDebito = !!(SampleLogado && SampleLogado.categoria !== 'Goleiro' && (
+                (SampleLogado.valor_mensalidades_pendentes || 0) > 0 ||
+                (SampleLogado.cartoes_pendentes || 0) > 0 ||
+                (SampleLogado.multas_pendentes || 0) > 0
+            ));
+
             if (ehAdmin()) {
                 painelAdmin.classList.remove('hidden');
             } else {
@@ -645,6 +712,14 @@
                 alertaFechada.innerText = "🔒 A lista abre quarta às 5h e encerra sexta às 22h.";
                 btnVou.disabled = true; btnNaoVou.disabled = true;
                 btnVou.classList.add('opacity-30'); btnNaoVou.classList.add('opacity-30');
+                blocoConvidado.classList.add('hidden');
+            } else if (temDebito) {
+                alertaFechada.classList.remove('hidden');
+                alertaFechada.innerText = "🔒 Você tem pendência financeira (mensalidade, cartão ou multa). Regularize com o admin pra poder confirmar presença.";
+                btnVou.disabled = true;
+                btnVou.classList.add('opacity-30');
+                btnNaoVou.disabled = false;
+                btnNaoVou.classList.remove('opacity-30');
                 blocoConvidado.classList.add('hidden');
             } else {
                 alertaFechada.classList.add('hidden');
@@ -773,6 +848,15 @@
 
         async function registrarPresenca(status) {
             if (!SampleLogado) return;
+            if (status === 'Confirmado' && SampleLogado.categoria !== 'Goleiro') {
+                const temDebito = (SampleLogado.valor_mensalidades_pendentes || 0) > 0
+                    || (SampleLogado.cartoes_pendentes || 0) > 0
+                    || (SampleLogado.multas_pendentes || 0) > 0;
+                if (temDebito) {
+                    await showAlert("Você tem pendência financeira. Regularize com o admin antes de confirmar presença.");
+                    return;
+                }
+            }
             try {
                 const { error } = await dbClient.from('jogadores').update({ presenca: status }).eq('id', SampleLogado.id);
                 if (error) throw error;
@@ -1002,6 +1086,10 @@
             apuracaoPendente = null;
             pararTimerVotacao();
 
+            document.getElementById('meu-resultado-votacao').classList.add('hidden');
+            document.getElementById('meu-resultado-cheia').classList.add('hidden');
+            document.getElementById('meu-resultado-murcha').classList.add('hidden');
+
             if (ehAdmin()) painelAdmin.classList.remove('hidden'); else painelAdmin.classList.add('hidden');
 
             statusAberta.classList.add('hidden');
@@ -1024,6 +1112,7 @@
                 const { data: jogadores, error: errJ } = await dbClient
                     .from('jogadores')
                     .select('id, nome')
+                    .eq('presenca', 'Confirmado')
                     .order('nome', { ascending: true });
                 if (errJ) throw errJ;
                 candidatosVotacao = jogadores || [];
@@ -1034,6 +1123,7 @@
                     if (sessaoVotacaoAtual && sessaoVotacaoAtual.status === 'fechada' && (sessaoVotacaoAtual.vencedor_cheia_id || sessaoVotacaoAtual.vencedor_murcha_id)) {
                         await renderResultadoVotacao(sessaoVotacaoAtual);
                         resultado.classList.remove('hidden');
+                        mostrarResultadoPessoal(sessaoVotacaoAtual);
                     } else {
                         vazio.classList.remove('hidden');
                     }
@@ -1065,26 +1155,47 @@
         }
 
         function renderOpcoesVotacao() {
-            const containerCheia = document.getElementById('opcoes-cheia');
-            const containerMurcha = document.getElementById('opcoes-murcha');
-            containerCheia.innerHTML = '';
-            containerMurcha.innerHTML = '';
+            renderBlocoCategoria('cheia', document.getElementById('opcoes-cheia'), 'verde');
+            renderBlocoCategoria('murcha', document.getElementById('opcoes-murcha'), 'vermelho');
+        }
 
-            candidatosVotacao.forEach(j => {
-                const selecionadoCheia = meusVotos.cheia === j.id;
-                const btnCheia = document.createElement('button');
-                btnCheia.className = `text-xs font-bold py-2.5 rounded-lg border transition cursor-pointer ${selecionadoCheia ? 'bg-green-600 text-white border-green-500' : 'bg-marinho-deep text-white border-marinho-light hover:border-green-500/50'}`;
-                btnCheia.innerText = j.nome;
-                btnCheia.onclick = () => votar('cheia', j.id);
-                containerCheia.appendChild(btnCheia);
+        function renderBlocoCategoria(categoria, container, corBase) {
+            container.innerHTML = '';
+            const votadoId = meusVotos[categoria];
 
-                const selecionadoMurcha = meusVotos.murcha === j.id;
-                const btnMurcha = document.createElement('button');
-                btnMurcha.className = `text-xs font-bold py-2.5 rounded-lg border transition cursor-pointer ${selecionadoMurcha ? 'bg-red-600 text-white border-red-500' : 'bg-marinho-deep text-white border-marinho-light hover:border-red-500/50'}`;
-                btnMurcha.innerText = j.nome;
-                btnMurcha.onclick = () => votar('murcha', j.id);
-                containerMurcha.appendChild(btnMurcha);
+            // Já votou e confirmou nessa categoria — trava, não deixa trocar.
+            if (votadoId) {
+                const nome = (candidatosVotacao.find(c => c.id === votadoId) || {}).nome || '—';
+                const classesFundo = corBase === 'verde'
+                    ? 'bg-green-500/10 border-green-500/30 text-green-300'
+                    : 'bg-red-500/10 border-red-500/30 text-red-300';
+                const wrapper = document.createElement('div');
+                wrapper.className = `col-span-2 border rounded-lg p-3 text-center ${classesFundo}`;
+                wrapper.innerHTML = `<p class="text-xs font-bold">✅ Voto confirmado</p><p class="text-sm text-white font-black mt-0.5">${nome}</p>`;
+                container.appendChild(wrapper);
+                return;
+            }
+
+            // Em Bola Cheia, ninguém aparece pra votar em si mesmo.
+            const candidatos = categoria === 'cheia'
+                ? candidatosVotacao.filter(j => !SampleLogado || j.id !== SampleLogado.id)
+                : candidatosVotacao;
+
+            candidatos.forEach(j => {
+                const classesHover = corBase === 'verde' ? 'hover:border-green-500/50' : 'hover:border-red-500/50';
+                const btn = document.createElement('button');
+                btn.className = `text-xs font-bold py-2.5 rounded-lg border transition cursor-pointer bg-marinho-deep text-white border-marinho-light ${classesHover}`;
+                btn.innerText = j.nome;
+                btn.onclick = () => confirmarEVotar(categoria, j.id, j.nome);
+                container.appendChild(btn);
             });
+        }
+
+        async function confirmarEVotar(categoria, votadoId, nomeVotado) {
+            const rotulo = categoria === 'cheia' ? 'Bola Cheia' : 'Bola Murcha';
+            const confirmou = await showConfirm(`Confirma seu voto em "${nomeVotado}" para ${rotulo}?\n\nDepois de confirmar, não dá mais pra trocar nessa votação.`);
+            if (!confirmou) return;
+            await votar(categoria, votadoId);
         }
 
         async function votar(categoria, votadoId) {
@@ -1245,6 +1356,22 @@
                 showToast("Erro ao encerrar a votação.", "erro");
             }
         }));
+
+        function mostrarResultadoPessoal(sessao) {
+            if (!SampleLogado) return;
+            const bloco = document.getElementById('meu-resultado-votacao');
+            const elCheia = document.getElementById('meu-resultado-cheia');
+            const elMurcha = document.getElementById('meu-resultado-murcha');
+
+            const souCheia = sessao.vencedor_cheia_id === SampleLogado.id;
+            const souMurcha = sessao.vencedor_murcha_id === SampleLogado.id;
+
+            if (!souCheia && !souMurcha) { bloco.classList.add('hidden'); return; }
+
+            elCheia.classList.toggle('hidden', !souCheia);
+            elMurcha.classList.toggle('hidden', !souMurcha);
+            bloco.classList.remove('hidden');
+        }
 
         async function renderResultadoVotacao(sessao) {
             const container = document.getElementById('votacao-resultado-conteudo');
