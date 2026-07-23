@@ -149,6 +149,9 @@
                             <button id="btn-admin-forcar-vou" class="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-2 rounded-lg text-xs transition cursor-pointer">Confirmar Presença</button>
                             <button id="btn-admin-forcar-naovou" class="flex-1 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 font-bold py-2 rounded-lg text-xs transition cursor-pointer">Lançar Desfalque</button>
                         </div>
+                        <button id="btn-admin-forcar-duvida" class="w-full bg-marinho-deep border border-marinho-light text-marinho-light hover:text-white font-bold py-2 rounded-lg text-xs transition cursor-pointer">
+                            ↩️ Voltar pra "Sem Resposta"
+                        </button>
                     </div>
                 </div>
 
@@ -180,6 +183,9 @@
                 <button id="btn-vou" class="flex-1 bg-marinho-card border border-marinho-light text-white font-bold py-3.5 rounded-lg transition cursor-pointer">Vou Pro Jogo</button>
                 <button id="btn-naovou" class="flex-1 bg-marinho-card border border-marinho-light text-white font-bold py-3.5 rounded-lg transition cursor-pointer">Desfalque</button>
             </div>
+            <button id="btn-desfazer-presenca" class="hidden w-full text-marinho-light text-xs py-2 cursor-pointer hover:text-white transition underline decoration-dotted">
+                ↩️ Voltar pra "Sem Resposta"
+            </button>
 
             <!-- Painel para Adicionar Múltiplos Convidados -->
             <div id="bloco-convidado" class="bg-marinho-card border border-marinho-light rounded-xl p-3.5 space-y-2 hidden">
@@ -761,6 +767,13 @@
                         btnVou.className = "flex-1 font-bold py-3.5 rounded-lg transition border text-center cursor-pointer";
                         btnNaoVou.className = "flex-1 font-bold py-3.5 rounded-lg transition border text-center cursor-pointer";
 
+                        const btnDesfazer = document.getElementById('btn-desfazer-presenca');
+                        if (listaAberta && (SampleLogado.presenca === 'Confirmado' || SampleLogado.presenca === 'Dispensado')) {
+                            btnDesfazer.classList.remove('hidden');
+                        } else {
+                            btnDesfazer.classList.add('hidden');
+                        }
+
                         if (SampleLogado.presenca === 'Confirmado') {
                             btnVou.classList.add('bg-green-600', 'text-white', 'border-green-500');
                             btnNaoVou.classList.add('bg-marinho-card', 'text-gray-400', 'border-marinho-light');
@@ -860,7 +873,7 @@
             try {
                 const { error } = await dbClient.from('jogadores').update({ presenca: status }).eq('id', SampleLogado.id);
                 if (error) throw error;
-                if (status === 'Dispensado') {
+                if (status === 'Dispensado' || status === 'Sem Resposta') {
                     const { error: errDel } = await dbClient.from('convidados').delete().eq('jogador_id', SampleLogado.id);
                     if (errDel) throw errDel;
                 }
@@ -896,7 +909,7 @@
             try {
                 const { error } = await dbClient.from('jogadores').update({ presenca: status }).eq('id', idJogador);
                 if (error) throw error;
-                if (status === 'Dispensado') {
+                if (status === 'Dispensado' || status === 'Sem Resposta') {
                     const { error: errDel } = await dbClient.from('convidados').delete().eq('jogador_id', idJogador);
                     if (errDel) throw errDel;
                 }
@@ -910,8 +923,10 @@
 
         const btnAdminForcarVou = document.getElementById('btn-admin-forcar-vou');
         const btnAdminForcarNaoVou = document.getElementById('btn-admin-forcar-naovou');
+        const btnAdminForcarDuvida = document.getElementById('btn-admin-forcar-duvida');
         btnAdminForcarVou.addEventListener('click', withLoading(btnAdminForcarVou, null, () => forcarStatusJogadorAdmin('Confirmado')));
         btnAdminForcarNaoVou.addEventListener('click', withLoading(btnAdminForcarNaoVou, null, () => forcarStatusJogadorAdmin('Dispensado')));
+        btnAdminForcarDuvida.addEventListener('click', withLoading(btnAdminForcarDuvida, null, () => forcarStatusJogadorAdmin('Sem Resposta')));
 
         // AÇÃO EXCLUSIVA DO ADMIN: CADASTRO DE NOVO ATLETA
         const btnAdminAddJogador = document.getElementById('btn-admin-add-jogador');
@@ -991,8 +1006,10 @@
 
         const btnVouEl = document.getElementById('btn-vou');
         const btnNaoVouEl = document.getElementById('btn-naovou');
+        const btnDesfazerEl = document.getElementById('btn-desfazer-presenca');
         btnVouEl.addEventListener('click', withLoading(btnVouEl, null, () => registrarPresenca('Confirmado')));
         btnNaoVouEl.addEventListener('click', withLoading(btnNaoVouEl, null, () => registrarPresenca('Dispensado')));
+        btnDesfazerEl.addEventListener('click', withLoading(btnDesfazerEl, null, () => registrarPresenca('Sem Resposta')));
 
         // ============================================================
         // TEMPO REAL — escuta mudanças no banco e atualiza a tela
